@@ -1,406 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biological Pathways Network</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-        
-        h1 {
-            color: white;
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        #container {
-            background: rgba(255,255,255,0.95);
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-        }
-        
-        .node {
-            cursor: pointer;
-            stroke: #fff;
-            stroke-width: 3px;
-            transition: all 0.3s ease;
-        }
-        
-        .node:hover {
-            filter: brightness(1.2);
-        }
-        
-        .node.selected {
-            stroke: #ff4757;
-            stroke-width: 5px;
-            filter: drop-shadow(0 0 10px rgba(255, 71, 87, 0.5));
-        }
-        
-        .node.connected {
-            stroke: #2ed573;
-            stroke-width: 4px;
-            filter: drop-shadow(0 0 8px rgba(46, 213, 115, 0.4));
-        }
-        
-        .node.dimmed {
-            opacity: 0.2;
-        }
-        
-        .link {
-            stroke: #999;
-            stroke-opacity: 0.6;
-            stroke-width: 2px;
-            transition: all 0.3s ease;
-        }
-        
-        .link.highlighted {
-            stroke: #2ed573;
-            stroke-width: 4px;
-            stroke-opacity: 1;
-            filter: drop-shadow(0 0 4px rgba(46, 213, 115, 0.6));
-        }
-        
-        .link.dimmed {
-            opacity: 0.1;
-        }
-        
-        .node-label {
-            font-size: 11px;
-            font-weight: 600;
-            text-anchor: middle;
-            pointer-events: none;
-            fill: #2c3e50;
-            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
-        }
-        
-        .instructions {
-            padding: 20px;
-            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-            color: white;
-            font-size: 14px;
-            text-align: center;
-            font-weight: 500;
-        }
-        
-        .legend {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.9);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin: 5px 0;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin-right: 10px;
-            border: 2px solid white;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Biological Pathways Network</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: sans-serif; display: flex; }
+    svg { border: 1px solid #ccc; }
+    #biomarkers { margin-left: 20px; }
+    .node { cursor: pointer; fill: steelblue; stroke: #fff; stroke-width: 1.5px; }
+    .link { stroke: #999; stroke-opacity: 0.6; }
+  </style>
 </head>
 <body>
-    <h1>Interactive Biological Pathways Network</h1>
-    <div class="instructions">
-        Click on any pathway to explore its connections • Drag nodes to reorganize • Click background to reset
-    </div>
-    <div id="container" style="position: relative;">
-        <div class="legend">
-            <div class="legend-item">
-                <div class="legend-color" style="background: #e74c3c;"></div>
-                <span>Metabolism</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #3498db;"></div>
-                <span>Transport & Signaling</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #2ecc71;"></div>
-                <span>Defense & Stress</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #f39c12;"></div>
-                <span>Regulation</span>
-            </div>
-        </div>
-        <svg id="network"></svg>
-    </div>
+  <svg width="800" height="600"></svg>
+  <div id="biomarkers">
+    <h3>Biomarkers</h3>
+    <ul id="biomarker-list"></ul>
+  </div>
 
-    <script>
-        // Biological pathways with scientifically accurate categorization
-        const pathways = [
-            {id: "beta_oxidation", name: "Beta-oxidation\nof Fatty Acids", type: "metabolism", x: 200, y: 200},
-            {id: "urea_cycle", name: "Urea Cycle", type: "metabolism", x: 300, y: 150},
-            {id: "neurotransmitter", name: "Neurotransmitter\nMetabolism", type: "transport_signaling", x: 500, y: 100},
-            {id: "complement", name: "Complement\nCascade", type: "defense_stress", x: 600, y: 200},
-            {id: "protein_metabolism", name: "Protein\nMetabolism", type: "metabolism", x: 250, y: 250},
-            {id: "krebs", name: "Krebs Cycle", type: "metabolism", x: 350, y: 300},
-            {id: "acute_phase", name: "Acute-phase\nProtein Response", type: "defense_stress", x: 550, y: 250},
-            {id: "hormone_transport", name: "Hormone Binding\n& Transport", type: "transport_signaling", x: 450, y: 150},
-            {id: "coagulation", name: "Coagulation\nPathway", type: "defense_stress", x: 650, y: 300},
-            {id: "lipid_transport", name: "Lipid Metabolism\n& Transport", type: "transport_signaling", x: 150, y: 300},
-            {id: "glycolysis_gluconeogenesis", name: "Glycolysis-\nGluconeogenesis", type: "metabolism", x: 400, y: 200},
-            {id: "oxidative_stress", name: "Oxidative Stress\nResponse", type: "regulation", x: 500, y: 350}
-        ];
+  <script>
+    const pathways = [
+      "Acute-phase protein response",
+      "Beta-oxidation of fatty acids",
+      "Coagulation pathway",
+      "Complement cascade",
+      "Glycolysis-gluconeogenesis cycle",
+      "Hormone binding and transport",
+      "Krebs cycle",
+      "Lipid metabolism and transport",
+      "Neurotransmitter metabolism",
+      "Oxidative stress",
+      "Protein metabolism",
+      "Urea cycle"
+    ];
 
-        // Scientifically accurate connections between pathways
-        const connections = [
-            // Core metabolic connections
-            {source: "glycolysis_gluconeogenesis", target: "krebs", strength: 1.0},
-            {source: "beta_oxidation", target: "krebs", strength: 1.0},
-            {source: "protein_metabolism", target: "urea_cycle", strength: 1.0},
-            {source: "protein_metabolism", target: "krebs", strength: 0.8},
-            
-            // Lipid connections
-            {source: "lipid_transport", target: "beta_oxidation", strength: 0.9},
-            {source: "lipid_transport", target: "hormone_transport", strength: 0.7},
-            
-            // Stress and defense responses
-            {source: "oxidative_stress", target: "acute_phase", strength: 0.8},
-            {source: "acute_phase", target: "complement", strength: 0.7},
-            {source: "complement", target: "coagulation", strength: 0.8},
-            
-            // Neurotransmitter connections
-            {source: "neurotransmitter", target: "protein_metabolism", strength: 0.6},
-            {source: "neurotransmitter", target: "oxidative_stress", strength: 0.5},
-            
-            // Hormone and signaling
-            {source: "hormone_transport", target: "glycolysis_gluconeogenesis", strength: 0.6},
-            {source: "hormone_transport", target: "lipid_transport", strength: 0.7},
-            
-            // Metabolic regulation connections
-            {source: "krebs", target: "oxidative_stress", strength: 0.6},
-            {source: "glycolysis_gluconeogenesis", target: "oxidative_stress", strength: 0.5},
-            
-            // Protein synthesis and degradation
-            {source: "acute_phase", target: "protein_metabolism", strength: 0.7},
-            {source: "urea_cycle", target: "oxidative_stress", strength: 0.4},
-            
-            // Additional physiological connections
-            {source: "coagulation", target: "acute_phase", strength: 0.6},
-            {source: "beta_oxidation", target: "oxidative_stress", strength: 0.5}
-        ];
+    // Placeholder edges (example logical connections)
+    const links = [
+      { source: "Glycolysis-gluconeogenesis cycle", target: "Krebs cycle" },
+      { source: "Krebs cycle", target: "Beta-oxidation of fatty acids" },
+      { source: "Beta-oxidation of fatty acids", target: "Lipid metabolism and transport" },
+      { source: "Acute-phase protein response", target: "Coagulation pathway" },
+      { source: "Acute-phase protein response", target: "Complement cascade" },
+      { source: "Hormone binding and transport", target: "Lipid metabolism and transport" },
+      { source: "Protein metabolism", target: "Urea cycle" },
+      { source: "Neurotransmitter metabolism", target: "Protein metabolism" },
+      { source: "Oxidative stress", target: "Acute-phase protein response" }
+    ];
 
-        // Enhanced color scheme for different pathway types
-        const colorScale = d3.scaleOrdinal()
-            .domain(["metabolism", "transport_signaling", "defense_stress", "regulation"])
-            .range(["#e74c3c", "#3498db", "#2ecc71", "#f39c12"]);
+    // Biomarker mapping
+    const biomarkerMap = {
+      "Acute-phase protein response": ["Serum amyloid A-4 protein", "Haptoglobin", "Fibronectin", "Fibrinogen gamma chain", "Fibrinogen beta chain", "Fibrinogen alpha chain", "Fetuin-B", "Complement C3", "Ceruloplasmin", "C-reactive protein", "Alpha-2-macroglobulin", "Alpha-1-antitrypsin", "Alpha-1-acid glycoprotein 1", "Apolipoprotein D", "Beta-2-glycoprotein 1", "Serotransferrin"],
+      "Beta-oxidation of fatty acids": ["Short Chain Acylcarnitines", "Octadecanoylcarnitine", "Octadecadienylcarnitine", "Medium Chain Acylcarnitines", "Long Chain Acylcarnitines", "Hexadecanoylcarnitine", "Carnitine", "Acylcarnitines"],
+      "Coagulation pathway": ["von Willebrand Factor", "Vitamin K-dependent protein S", "Prothrombin", "Protein Z-dependent protease inhibitor", "Plasminogen", "Plasma protease C1 inhibitor", "Heparin cofactor 2", "Fibrinogen gamma chain", "Fibrinogen beta chain", "Fibrinogen alpha chain", "Coagulation factor XIII B chain", "Coagulation factor XIII A chain", "Coagulation factor XII", "Coagulation factor XI", "Coagulation factor X", "Coagulation factor IX", "Carboxypeptidase N catalytic chain", "Beta-2-glycoprotein 1"],
+      "Complement cascade": ["Complement factor I", "Complement factor H", "Complement factor D", "Complement factor B", "Complement component C9", "Complement component C8 beta chain", "Complement component C8 alpha chain", "Complement component C7", "Complement component C6", "Complement C5", "Complement C4-B", "Complement C3", "Complement C2", "Complement C1s subcomponent", "Complement C1r subcomponent-like protein", "Complement C1r subcomponent", "Complement C1q subcomponent subunit B", "C4b-binding protein alpha chain"],
+      "Glycolysis-gluconeogenesis cycle": ["Pyruvic acid", "Lactic acid", "Glutamine", "Glucose", "Alanine"],
+      "Hormone binding and transport": ["Vitamin D-binding protein", "Transthyretin", "Thyroxine-binding globulin", "Sex hormone-binding globulin", "Serum albumin", "Retinol-binding protein 4", "Corticosteroid-binding globulin", "Apolipoprotein D", "Apolipoprotein L1"],
+      "Krebs cycle": ["Succinic acid", "Pyruvic acid", "Fumaric acid", "Citric acid", "alpha-Ketoglutaric acid"],
+      "Lipid metabolism and transport": ["Sphingomyeline C20:2", "Sphingomyeline C16:0", "Sphingolipids", "Lysophospholipids", "Glycerophospholipids", "Retinol-binding protein 4", "Phospholipid transfer protein", "Complement factor D", "Clusterin", "Ceruloplasmin", "Apolipoprotein E", "Apolipoprotein C-IV", "Apolipoprotein C-III", "Apolipoprotein C-II", "Apolipoprotein C-I", "Apolipoprotein B-100", "Apolipoprotein A-I", "Apolipoprotein D", "Apolipoprotein L1"],
+      "Neurotransmitter metabolism": ["Homovanillic acid", "5-Hydroxyindole-3-acetic acid", "Tyrosine", "Tryptophan", "Serotonin", "Phenylalanine", "Kynurenine", "Glutamic acid", "Gamma-aminobutyric acid"],
+      "Oxidative stress": ["Retinol-binding protein 4", "Peroxiredoxin-2", "Haptoglobin", "Glutathione peroxidase 3", "Ceruloplasmin", "Apolipoprotein D", "Apolipoprotein L1"],
+      "Protein metabolism": ["Valine", "Spermidine", "Sarcosine", "Proline", "Phenylalanine", "Leucine", "Glutamine", "Cystatin-C", "Creatinine", "Creatine", "Betaine", "Asparagine", "Arginine", "Alpha-2-antiplasmin", "Alanine", "Protein AMBP", "Serotransferrin", "Cartilage acidic protein 1"],
+      "Urea cycle": ["Ornithine", "Glutamine", "Citrulline", "Aspartic acid", "Asparagine", "Arginine", "Acetyl-Ornithine"]
+    };
 
-        // SVG setup with responsive dimensions
-        const width = Math.min(1000, window.innerWidth - 40);
-        const height = Math.min(600, window.innerHeight - 200);
-        
-        const svg = d3.select("#network")
-            .attr("width", width)
-            .attr("height", height);
+    const nodes = pathways.map(name => ({ id: name }));
 
-        let selectedNode = null;
+    const width = 800, height = 600;
 
-        // Enhanced force simulation with variable link strength
-        const simulation = d3.forceSimulation(pathways)
-            .force("link", d3.forceLink(connections)
-                .id(d => d.id)
-                .distance(d => 100 / (d.strength || 1))
-                .strength(d => d.strength || 0.5))
-            .force("charge", d3.forceManyBody().strength(-400))
-            .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("collision", d3.forceCollide().radius(50))
-            .force("x", d3.forceX().strength(0.1))
-            .force("y", d3.forceY().strength(0.1));
+    const svg = d3.select("svg");
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+      .force("charge", d3.forceManyBody().strength(-500))
+      .force("center", d3.forceCenter(width / 2, height / 2));
 
-        // Create links with variable opacity based on strength
-        const link = svg.append("g")
-            .selectAll("line")
-            .data(connections)
-            .join("line")
-            .attr("class", "link")
-            .style("stroke-opacity", d => 0.3 + (d.strength || 0.5) * 0.4);
+    const link = svg.append("g")
+      .attr("stroke", "#999")
+      .attr("stroke-opacity", 0.6)
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("class", "link");
 
-        // Create nodes with enhanced styling
-        const node = svg.append("g")
-            .selectAll("circle")
-            .data(pathways)
-            .join("circle")
-            .attr("class", "node")
-            .attr("r", d => 30 + Math.random() * 10) // Slight variation in size
-            .attr("fill", d => {
-                const baseColor = d3.color(colorScale(d.type));
-                return `radial-gradient(circle, ${baseColor.brighter(0.3)}, ${baseColor})`;
-            })
-            .style("fill", d => {
-                // Create gradient effect
-                const grad = svg.append("defs").append("radialGradient")
-                    .attr("id", `grad-${d.id}`)
-                    .attr("cx", "30%").attr("cy", "30%");
-                
-                const baseColor = colorScale(d.type);
-                grad.append("stop").attr("offset", "0%").attr("stop-color", d3.color(baseColor).brighter(0.4));
-                grad.append("stop").attr("offset", "100%").attr("stop-color", baseColor);
-                
-                return `url(#grad-${d.id})`;
-            })
-            .call(d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended))
-            .on("click", handleNodeClick);
+    const node = svg.append("g")
+      .selectAll("circle")
+      .data(nodes)
+      .join("circle")
+      .attr("class", "node")
+      .attr("r", 20)
+      .call(drag(simulation))
+      .on("click", (event, d) => {
+        const biomarkers = biomarkerMap[d.id] || [];
+        d3.select("#biomarker-list").html(
+          biomarkers.map(b => `<li>${b}</li>`).join("")
+        );
+      });
 
-        // Create multi-line labels
-        const labels = svg.append("g")
-            .selectAll("g")
-            .data(pathways)
-            .join("g")
-            .attr("class", "node-label");
+    const label = svg.append("g")
+      .selectAll("text")
+      .data(nodes)
+      .join("text")
+      .text(d => d.id)
+      .attr("text-anchor", "middle")
+      .attr("dy", 4)
+      .style("font-size", "10px");
 
-        labels.each(function(d) {
-            const lines = d.name.split('\n');
-            const labelGroup = d3.select(this);
-            
-            lines.forEach((line, i) => {
-                labelGroup.append("text")
-                    .text(line)
-                    .attr("dy", i === 0 ? "0.35em" : "1.2em")
-                    .attr("text-anchor", "middle");
-            });
-        });
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
 
-        // Enhanced node selection with pathway analysis
-        function handleNodeClick(event, d) {
-            event.stopPropagation();
-            
-            selectedNode = d;
-            
-            // Get connected nodes with strength information
-            const connectedNodes = new Set();
-            const highlightedLinks = new Set();
-            const connectionStrengths = {};
-            
-            connections.forEach(link => {
-                if (link.source.id === d.id || link.target.id === d.id) {
-                    const connectedId = link.source.id === d.id ? link.target.id : link.source.id;
-                    connectedNodes.add(link.source.id);
-                    connectedNodes.add(link.target.id);
-                    highlightedLinks.add(link);
-                    connectionStrengths[connectedId] = link.strength;
-                }
-            });
+      node
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
 
-            updateVisualStates(d.id, connectedNodes, highlightedLinks);
-            centerOnNode(d);
-            
-            // Add subtle pulsing animation to selected node
-            d3.select(event.target)
-                .transition()
-                .duration(200)
-                .attr("r", 45)
-                .transition()
-                .duration(200)
-                .attr("r", 35);
-        }
+      label
+        .attr("x", d => d.x)
+        .attr("y", d => d.y);
+    });
 
-        function updateVisualStates(selectedId, connectedNodes, highlightedLinks) {
-            node
-                .classed("selected", d => d.id === selectedId)
-                .classed("connected", d => d.id !== selectedId && connectedNodes.has(d.id))
-                .classed("dimmed", d => !connectedNodes.has(d.id));
-
-            link
-                .classed("highlighted", d => highlightedLinks.has(d))
-                .classed("dimmed", d => !highlightedLinks.has(d));
-        }
-
-        function centerOnNode(targetNode) {
-            const centerX = width / 2;
-            const centerY = height / 2;
-            
-            // Smooth transition with easing
-            simulation.force("center", d3.forceCenter(centerX, centerY));
-            simulation.force("selected", d3.forceRadial(0, targetNode.x, targetNode.y).strength(0.15));
-            
-            simulation.alpha(0.4).restart();
-            
-            setTimeout(() => {
-                simulation.force("selected", null);
-            }, 1000);
-        }
-
-        // Smooth animation updates
-        simulation.on("tick", () => {
-            link
-                .attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
-
-            node
-                .attr("cx", d => d.x)
-                .attr("cy", d => d.y);
-            
-            labels
-                .attr("transform", d => `translate(${d.x}, ${d.y})`);
-        });
-
-        // Enhanced reset functionality
-        svg.on("click", function() {
-            selectedNode = null;
-            node.classed("selected connected dimmed", false);
-            link.classed("highlighted dimmed", false);
-            
-            simulation.force("center", d3.forceCenter(width / 2, height / 2));
-            simulation.alpha(0.3).restart();
-        });
-
-        // Drag functions with enhanced feedback
-        function dragstarted(event, d) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-            
-            d3.select(event.sourceEvent.target)
-                .style("cursor", "grabbing");
-        }
-
-        function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
-        }
-
-        function dragended(event, d) {
-            if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-            
-            d3.select(event.sourceEvent.target)
-                .style("cursor", "grab");
-        }
-
-        // Add keyboard shortcuts for better interaction
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                svg.dispatch('click');
-            }
-        });
-    </script>
+    function drag(simulation) {
+      function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+      function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+      function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
+      return d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended);
+    }
+  </script>
 </body>
 </html>
