@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Biological Pathways Network</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: sans-serif; display: flex; background: #f8f9fa; }
+    svg { border: 1px solid #ccc; background: white; }
+    #biomarkers { margin-left: 20px; max-width: 300px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .node { cursor: pointer; stroke: #fff; stroke-width: 2px; }
+    .link { stroke: #999; stroke-opacity: 0.6; stroke-width: 2px; }
+    .group-hull { fill: rgba(0,0,0,0.05); stroke: rgba(0,0,0,0.2); stroke-width: 1; stroke-dasharray: 5,5; }
+    .group-label { font-size: 14px; font-weight: bold; text-anchor: middle; fill: #555; }
+    .node-label { pointer-events: none; text-anchor: middle; dominant-baseline: middle; font-size: 11px; font-weight: 500; fill: white; }
+    .legend { font-size: 12px; }
+    .legend-item { margin-bottom: 5px; }
+    .legend-color { display: inline-block; width: 15px; height: 15px; margin-right: 8px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <svg width="1000" height="700"></svg>
+  <div id="biomarkers">
+    <h3>Pathway Information</h3>
+    <div id="legend" class="legend">
+      <h4>Pathway Types:</h4>
+      <div id="legend-items"></div>
+    </div>
+    <div id="selected-pathway" style="margin-top: 20px;">
+      <h4>Biomarkers</h4>
+      <p><em>Click a pathway node to view its biomarkers</em></p>
+      <ul id="biomarker-list"></ul>
+    </div>
+  </div>
+
+  <script>
+    // Define pathway groups with colors
+    const pathwayGroups = {
+      "Energy Metabolism": {
+        color: "#2E8B57",
+        pathways: ["Glycolysis-gluconeogenesis cycle", "Krebs cycle", "Beta-oxidation of fatty acids"]
+      },
+      "Lipid & Transport": {
+        color: "#4682B4", 
+        pathways: ["Lipid metabolism and transport", "Hormone binding and transport"]
+      },
+      "Immune Response": {
+        color: "#DC143C",
+        pathways: ["Acute-phase protein response", "Complement cascade", "Coagulation pathway"]
+      },
+      "Protein Processing": {
+        color: "#9932CC",
+        pathways: ["Protein metabolism", "Urea cycle"]
+      },
+      "Cellular Regulation": {
+        color: "#FF8C00",
+        pathways: ["Neurotransmitter metabolism", "Oxidative stress"]
+      }
+    };
+
+    const pathways = [
+      "Acute-phase protein response",
+      "Beta-oxidation of fatty acids", 
+      "Coagulation pathway",
+      "Complement cascade",
+      "Glycolysis-gluconeogenesis cycle",
+      "Hormone binding and transport",
+      "Krebs cycle",
+      "Lipid metabolism and transport",
+      "Neurotransmitter metabolism", 
+      "Oxidative stress",
+      "Protein metabolism",
+      "Urea cycle"
+    ];
+
+    const links = [
+      { source: "Glycolysis-gluconeogenesis cycle", target: "Krebs cycle" },
+      { source: "Krebs cycle", target: "Beta-oxidation of fatty acids" },
+      { source: "Beta-oxidation of fatty acids", target: "Lipid metabolism and transport" },
+      { source: "Acute-phase protein response", target: "Coagulation pathway" },
+      { source: "Acute-phase protein response", target: "Complement cascade" },
+      { source: "Hormone binding and transport", target: "Lipid metabolism and transport" },
+      { source: "Protein metabolism", target: "Urea cycle" },
+      { source: "Neurotransmitter metabolism", target: "Protein metabolism" },
+      { source: "Oxidative stress", target: "Acute-phase protein response" }
+    ];
+
+    const biomarkerMap = {
+      "Acute-phase protein response": ["Serum amyloid A-4 protein", "Haptoglobin", "Fibronectin", "Fibrinogen gamma chain", "Fibrinogen beta chain", "Fibrinogen alpha chain", "Fetuin-B", "Complement C3", "Ceruloplasmin", "C-reactive protein", "Alpha-2-macroglobulin", "Alpha-1-antitrypsin", "Alpha-1-acid glycoprotein 1", "Apolipoprotein D", "Beta-2-glycoprotein 1", "Serotransferrin"],
+      "Beta-oxidation of fatty acids": ["Short Chain Acylcarnitines", "Octadecanoylcarnitine", "Octadecadienylcarnitine", "Medium Chain Acylcarnitines", "Long Chain Acylcarnitines", "Hexadecanoylcarnitine", "Carnitine", "Acylcarnitines"],
+      "Coagulation pathway": ["von Willebrand Factor", "Vitamin K-dependent protein S", "Prothrombin", "Protein Z-dependent protease inhibitor", "Plasminogen", "Plasma protease C1 inhibitor", "Heparin cofactor 2", "Fibrinogen gamma chain", "Fibrinogen beta chain", "Fibrinogen alpha chain", "Coagulation factor XIII B chain", "Coagulation factor XIII A chain", "Coagulation factor XII", "Coagulation factor XI", "Coagulation factor X", "Coagulation factor IX", "Carboxypeptidase N catalytic chain", "Beta-2-glycoprotein 1"],
+      "Complement cascade": ["Complement factor I", "Complement factor H", "Complement factor D", "Complement factor B", "Complement component C9", "Complement component C8 beta chain", "Complement component C8 alpha chain", "Complement component C7", "Complement component C6", "Complement C5", "Complement C4-B", "Complement C3", "Complement C2", "Complement C1s subcomponent", "Complement C1r subcomponent-like protein", "Complement C1r subcomponent", "Complement C1q subcomponent subunit B", "C4b-binding protein alpha chain"],
+      "Glycolysis-gluconeogenesis cycle": ["Pyruvic acid", "Lactic acid", "Glutamine", "Glucose", "Alanine"],
+      "Hormone binding and transport": ["Vitamin D-binding protein", "Transthyretin", "Thyroxine-binding globulin", "Sex hormone-binding globulin", "Serum albumin", "Retinol-binding protein 4", "Corticosteroid-binding globulin", "Apolipoprotein D", "Apolipoprotein L1"],
+      "Krebs cycle": ["Succinic acid", "Pyruvic acid", "Fumaric acid", "Citric acid", "alpha-Ketoglutaric acid"],
+      "Lipid metabolism and transport": ["Sphingomyeline C20:2", "Sphingomyeline C16:0", "Sphingolipids", "Lysophospholipids", "Glycerophospholipids", "Retinol-binding protein 4", "Phospholipid transfer protein", "Complement factor D", "Clusterin", "Ceruloplasmin", "Apolipoprotein E", "Apolipoprotein C-IV", "Apolipoprotein C-III", "Apolipoprotein C-II", "Apolipoprotein C-I", "Apolipoprotein B-100", "Apolipoprotein A-I", "Apolipoprotein D", "Apolipoprotein L1"],
+      "Neurotransmitter metabolism": ["Homovanillic acid", "5-Hydroxyindole-3-acetic acid", "Tyrosine", "Tryptophan", "Serotonin", "Phenylalanine", "Kynurenine", "Glutamic acid", "Gamma-aminobutyric acid"],
+      "Oxidative stress": ["Retinol-binding protein 4", "Peroxiredoxin-2", "Haptoglobin", "Glutathione peroxidase 3", "Ceruloplasmin", "Apolipoprotein D", "Apolipoprotein L1"],
+      "Protein metabolism": ["Valine", "Spermidine", "Sarcosine", "Proline", "Phenylalanine", "Leucine", "Glutamine", "Cystatin-C", "Creatinine", "Creatine", "Betaine", "Asparagine", "Arginine", "Alpha-2-antiplasmin", "Alanine", "Protein AMBP", "Serotransferrin", "Cartilage acidic protein 1"],
+      "Urea cycle": ["Ornithine", "Glutamine", "Citrulline", "Aspartic acid", "Asparagine", "Arginine", "Acetyl-Ornithine"]
+    };
+
+    // Helper function to get group for pathway
+    function getPathwayGroup(pathway) {
+      for (const [groupName, groupData] of Object.entries(pathwayGroups)) {
+        if (groupData.pathways.includes(pathway)) {
+          return { name: groupName, color: groupData.color };
+        }
+      }
+      return { name: "Other", color: "#808080" };
+    }
+
+    // Create nodes with group information
+    const nodes = pathways.map(name => {
+      const group = getPathwayGroup(name);
+      return { 
+        id: name, 
+        group: group.name,
+        color: group.color
+      };
+    });
+
+    const width = 1000, height = 700;
+    const svg = d3.select("svg");
+
+    // Create legend
+    const legendItems = d3.select("#legend-items");
+    Object.entries(pathwayGroups).forEach(([groupName, groupData]) => {
+      const item = legendItems.append("div").attr("class", "legend-item");
+      item.append("span")
+        .attr("class", "legend-color")
+        .style("background-color", groupData.color);
+      item.append("span").text(groupName);
+    });
+
+    // Create simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).distance(120))
+      .force("charge", d3.forceManyBody().strength(-500))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collide", d3.forceCollide(80));
+
+    // Create group hulls
+    const groupHulls = svg.append("g").attr("class", "hulls");
+
+    // Create links
+    const link = svg.append("g")
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("class", "link");
+
+    // Create nodes as rounded rectangles
+    const nodeGroup = svg.append("g").selectAll("g")
+      .data(nodes)
+      .join("g")
+      .attr("class", "node-group")
+      .call(drag(simulation))
+      .on("click", (event, d) => {
+        const biomarkers = biomarkerMap[d.id] || [];
+        d3.select("#selected-pathway h4").text(`${d.id} Biomarkers`);
+        d3.select("#biomarker-list").html(
+          biomarkers.length > 0 ? 
+            biomarkers.map(b => `<li>${b}</li>`).join("") :
+            "<li><em>No biomarkers available</em></li>"
+        );
+      });
+
+    // Calculate text dimensions and create rectangles
+    nodeGroup.each(function(d) {
+      const text = d.id;
+      const words = text.split(/[\s-]/);
+      const maxWordsPerLine = 2;
+      const lines = [];
+      
+      for (let i = 0; i < words.length; i += maxWordsPerLine) {
+        lines.push(words.slice(i, i + maxWordsPerLine).join(' '));
+      }
+      
+      const lineHeight = 12;
+      const padding = 8;
+      const charWidth = 6;
+      const maxLineWidth = Math.max(...lines.map(line => line.length * charWidth));
+      
+      d.width = Math.max(maxLineWidth + padding * 2, 80);
+      d.height = lines.length * lineHeight + padding * 2;
+      d.lines = lines;
+    });
+
+    // Add rectangles
+    nodeGroup.append("rect")
+      .attr("class", "node")
+      .attr("width", d => d.width)
+      .attr("height", d => d.height)
+      .attr("x", d => -d.width / 2)
+      .attr("y", d => -d.height / 2)
+      .attr("rx", 8)
+      .attr("ry", 8)
+      .attr("fill", d => d.color);
+
+    // Add text labels with line breaks
+    nodeGroup.each(function(d) {
+      const group = d3.select(this);
+      d.lines.forEach((line, i) => {
+        group.append("text")
+          .attr("class", "node-label")
+          .attr("y", (i - (d.lines.length - 1) / 2) * 12)
+          .text(line);
+      });
+    });
+
+    // Update group hulls
+    function updateGroupHulls() {
+  const groupedNodes = d3.group(nodes, d => d.group);
+
+  groupHulls.selectAll("path")
+    .data([...groupedNodes.entries()])
+    .join("path")
+    .attr("class", "group-hull")
+    .attr("d", ([groupName, groupNodes]) => {
+      if (groupNodes.length === 1) {
+        // Single node: draw circle
+        const d = groupNodes[0];
+        const radius = Math.max(d.width, d.height) * 0.8 + 30;
+        return `M ${d.x - radius},${d.y}
+                A ${radius},${radius} 0 1,0 ${d.x + radius},${d.y}
+                A ${radius},${radius} 0 1,0 ${d.x - radius},${d.y}`;
+      } else if (groupNodes.length === 2) {
+        // Two nodes: draw capsule shape
+        const [a, b] = groupNodes;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const angle = Math.atan2(dy, dx);
+        const distance = Math.hypot(dx, dy);
+        const r = 40; // padding
+
+        const x1 = a.x + Math.cos(angle) * r;
+        const y1 = a.y + Math.sin(angle) * r;
+        const x2 = b.x - Math.cos(angle) * r;
+        const y2 = b.y - Math.sin(angle) * r;
+
+        const arc = r;
+
+        return `
+          M ${x1},${y1}
+          A ${arc},${arc} 0 0,1 ${x1 - Math.sin(angle)*2*arc},${y1 + Math.cos(angle)*2*arc}
+          L ${x2 - Math.sin(angle)*2*arc},${y2 + Math.cos(angle)*2*arc}
+          A ${arc},${arc} 0 0,1 ${x2},${y2}
+          Z
+        `;
+      } else {
+        // 3+ nodes: regular expanded convex hull
+        const points = groupNodes.map(d => [d.x, d.y]);
+        const hull = d3.polygonHull(points);
+        if (!hull) return null;
+
+        const centroid = d3.polygonCentroid(hull);
+        const expandedHull = hull.map(point => {
+          const dx = point[0] - centroid[0];
+          const dy = point[1] - centroid[1];
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const expandFactor = 1.5;
+          return [
+            centroid[0] + dx * expandFactor,
+            centroid[1] + dy * expandFactor
+          ];
+        });
+
+        return `M${expandedHull.join("L")}Z`;
+      }
+    });
+
+  // Add group labels
+  svg.selectAll(".group-label")
+    .data([...groupedNodes.entries()])
+    .join("text")
+    .attr("class", "group-label")
+    .text(([groupName]) => groupName)
+    .attr("x", ([, groupNodes]) => d3.mean(groupNodes, d => d.x))
+    .attr("y", ([, groupNodes]) => d3.min(groupNodes, d => d.y - d.height / 2) - 20);
+}
+
+
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => boundX(d.source.x))
+        .attr("y1", d => boundY(d.source.y))
+        .attr("x2", d => boundX(d.target.x))
+        .attr("y2", d => boundY(d.target.y));
+
+      nodeGroup
+        .attr("transform", d => {
+          d.x = boundX(d.x);
+          d.y = boundY(d.y);
+          return `translate(${d.x},${d.y})`;
+        });
+
+      updateGroupHulls();
+    });
+
+    function boundX(x) {
+      return Math.max(50, Math.min(width - 50, x));
+    }
+
+    function boundY(y) {
+      return Math.max(50, Math.min(height - 50, y));
+    }
+
+    function drag(simulation) {
+      function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+      function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+      function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
+      return d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended);
+    }
+  </script>
+</body>
+</html>
