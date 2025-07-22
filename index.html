@@ -7,9 +7,10 @@
   <style>
     body { font-family: sans-serif; display: flex; }
     svg { border: 1px solid #ccc; }
-    #biomarkers { margin-left: 20px; }
+    #biomarkers { margin-left: 20px; max-width: 300px; }
     .node { cursor: pointer; fill: steelblue; stroke: #fff; stroke-width: 1.5px; }
     .link { stroke: #999; stroke-opacity: 0.6; }
+    text { pointer-events: none; }
   </style>
 </head>
 <body>
@@ -35,7 +36,6 @@
       "Urea cycle"
     ];
 
-    // Placeholder edges (example logical connections)
     const links = [
       { source: "Glycolysis-gluconeogenesis cycle", target: "Krebs cycle" },
       { source: "Krebs cycle", target: "Beta-oxidation of fatty acids" },
@@ -48,7 +48,6 @@
       { source: "Oxidative stress", target: "Acute-phase protein response" }
     ];
 
-    // Biomarker mapping
     const biomarkerMap = {
       "Acute-phase protein response": ["Serum amyloid A-4 protein", "Haptoglobin", "Fibronectin", "Fibrinogen gamma chain", "Fibrinogen beta chain", "Fibrinogen alpha chain", "Fetuin-B", "Complement C3", "Ceruloplasmin", "C-reactive protein", "Alpha-2-macroglobulin", "Alpha-1-antitrypsin", "Alpha-1-acid glycoprotein 1", "Apolipoprotein D", "Beta-2-glycoprotein 1", "Serotransferrin"],
       "Beta-oxidation of fatty acids": ["Short Chain Acylcarnitines", "Octadecanoylcarnitine", "Octadecadienylcarnitine", "Medium Chain Acylcarnitines", "Long Chain Acylcarnitines", "Hexadecanoylcarnitine", "Carnitine", "Acylcarnitines"],
@@ -65,14 +64,14 @@
     };
 
     const nodes = pathways.map(name => ({ id: name }));
-
     const width = 800, height = 600;
 
     const svg = d3.select("svg");
     const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id(d => d.id).distance(150))
-      .force("charge", d3.forceManyBody().strength(-500))
-      .force("center", d3.forceCenter(width / 2, height / 2));
+      .force("link", d3.forceLink(links).id(d => d.id).distance(140))
+      .force("charge", d3.forceManyBody().strength(-400))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collide", d3.forceCollide(40));
 
     const link = svg.append("g")
       .attr("stroke", "#999")
@@ -107,19 +106,27 @@
 
     simulation.on("tick", () => {
       link
-        .attr("x1", d => d.source.x)
-        .attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x)
-        .attr("y2", d => d.target.y);
+        .attr("x1", d => boundX(d.source.x))
+        .attr("y1", d => boundY(d.source.y))
+        .attr("x2", d => boundX(d.target.x))
+        .attr("y2", d => boundY(d.target.y));
 
       node
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y);
+        .attr("cx", d => d.x = boundX(d.x))
+        .attr("cy", d => d.y = boundY(d.y));
 
       label
         .attr("x", d => d.x)
         .attr("y", d => d.y);
     });
+
+    function boundX(x) {
+      return Math.max(30, Math.min(width - 30, x));
+    }
+
+    function boundY(y) {
+      return Math.max(30, Math.min(height - 30, y));
+    }
 
     function drag(simulation) {
       function dragstarted(event, d) {
