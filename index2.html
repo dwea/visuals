@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Enhanced Human Body Pathway Explorer</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <title>Human Body Pathway Explorer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <style>
     body { 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
@@ -85,7 +85,7 @@
     
     .link { 
       stroke: #999; 
-      stroke-opacity: 0.4;
+      stroke-opacity: 0.6;
       stroke-width: 2px;
       transition: all 0.3s ease;
     }
@@ -114,14 +114,6 @@
       50% { stroke-opacity: 1; }
     }
     
-    .cluster-hull {
-      fill: none;
-      stroke-width: 2px;
-      stroke-dasharray: 5,5;
-      opacity: 0.6;
-      pointer-events: none;
-    }
-    
     .category { 
       cursor: pointer; 
       opacity: 0.7;
@@ -140,22 +132,6 @@
       opacity: 1;
       stroke-width: 3;
       filter: drop-shadow(0 0 6px rgba(0,0,0,0.3));
-    }
-    
-    .control-btn {
-      background: #3498db;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin: 5px;
-      transition: background 0.3s ease;
-      font-size: 12px;
-    }
-    
-    .control-btn:hover {
-      background: #2980b9;
     }
     
     .biomarker-item {
@@ -179,15 +155,6 @@
       border-radius: 8px;
       margin-top: 15px;
       border-left: 4px solid #27ae60;
-    }
-    
-    .search-box {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #bdc3c7;
-      border-radius: 6px;
-      margin-bottom: 15px;
-      font-size: 14px;
     }
     
     .legend {
@@ -222,13 +189,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>Enhanced Human Body Pathway Explorer</h1>
+    <h1>Human Body Pathway Explorer</h1>
     
     <!-- Body Map Panel -->
     <div class="panel">
       <h3>Body Systems</h3>
       <svg id="bodymap" width="200" height="500">
-        <!-- Enhanced body representation -->
+        <!-- Body representation -->
         <circle cx="100" cy="40" r="25" fill="#8e44ad" class="category" data-cat="Cellular Regulation"></circle>
         <text x="100" y="45" text-anchor="middle" fill="white" font-size="8">Brain</text>
         
@@ -267,14 +234,11 @@
           <span>Energy Metabolism</span>
         </div>
       </div>
-      
-      <button class="control-btn" id="cluster">Toggle Cluster View</button>
     </div>
 
     <!-- Force Diagram Panel -->
     <div class="panel">
       <h3>Pathway Network</h3>
-      <input type="text" class="search-box" id="search" placeholder="Search pathways or biomarkers...">
       <svg id="network" width="500" height="500"></svg>
       <div class="stats" id="stats">
         Click on pathways to explore connections
@@ -291,7 +255,7 @@
   </div>
 
   <script>
-    // Enhanced data structure with more details
+    // Data structure
     const categories = {
       "Energy Metabolism": ["Glycolysis-gluconeogenesis cycle", "Krebs cycle", "Beta-oxidation of fatty acids"],
       "Lipid & Transport": ["Lipid metabolism and transport", "Hormone binding and transport"],
@@ -308,34 +272,6 @@
       "Cellular Regulation": "#8e44ad"
     };
 
-    // Directional relationships based on biological flow
-    const directionalConnections = {
-      "Glycolysis-gluconeogenesis cycle → Krebs cycle": true,
-      "Krebs cycle → Beta-oxidation of fatty acids": false, // bidirectional
-      "Beta-oxidation of fatty acids → Lipid metabolism and transport": true,
-      "Acute-phase protein response → Coagulation pathway": true,
-      "Acute-phase protein response → Complement cascade": true,
-      "Hormone binding and transport → Lipid metabolism and transport": false,
-      "Protein metabolism → Urea cycle": true,
-      "Neurotransmitter metabolism → Protein metabolism": false,
-      "Oxidative stress → Acute-phase protein response": true,
-      "Glycolysis-gluconeogenesis cycle → Oxidative stress": false
-    };
-
-    // Enhanced links with connection strength and directionality
-    const links = [
-      { source: "Glycolysis-gluconeogenesis cycle", target: "Krebs cycle", strength: "strong", directional: true },
-      { source: "Krebs cycle", target: "Beta-oxidation of fatty acids", strength: "medium", directional: false },
-      { source: "Beta-oxidation of fatty acids", target: "Lipid metabolism and transport", strength: "strong", directional: true },
-      { source: "Acute-phase protein response", target: "Coagulation pathway", strength: "strong", directional: true },
-      { source: "Acute-phase protein response", target: "Complement cascade", strength: "medium", directional: true },
-      { source: "Hormone binding and transport", target: "Lipid metabolism and transport", strength: "medium", directional: false },
-      { source: "Protein metabolism", target: "Urea cycle", strength: "strong", directional: true },
-      { source: "Neurotransmitter metabolism", target: "Protein metabolism", strength: "medium", directional: false },
-      { source: "Oxidative stress", target: "Acute-phase protein response", strength: "strong", directional: true },
-      { source: "Glycolysis-gluconeogenesis cycle", target: "Oxidative stress", strength: "medium", directional: false }
-    ];
-
     const biomarkerMap = {
       "Acute-phase protein response": ["Serum amyloid A-4 protein", "Haptoglobin", "C-reactive protein"],
       "Beta-oxidation of fatty acids": ["Short Chain Acylcarnitines", "Octadecanoylcarnitine", "Acetyl-CoA"],
@@ -351,7 +287,6 @@
       "Urea cycle": ["Ornithine", "Citrulline", "Arginine", "Carbamoyl phosphate"]
     };
 
-    // Pathway descriptions
     const pathwayDescriptions = {
       "Acute-phase protein response": "Rapid immune response triggered by infection, inflammation, or tissue damage.",
       "Beta-oxidation of fatty acids": "Process of breaking down fatty acids to produce energy in the form of ATP.",
@@ -367,12 +302,27 @@
       "Urea cycle": "Metabolic pathway that converts toxic ammonia to urea for safe excretion."
     };
 
-    const pathways = Object.keys(biomarkerMap);
-    let nodes = pathways.map(name => ({ 
+    // Create nodes from all pathways
+    const pathways = Object.values(categories).flat();
+    const nodes = pathways.map(name => ({ 
       id: name, 
       category: getCategory(name),
       color: categoryColors[getCategory(name)] || "#95a5a6"
     }));
+
+    // Define connections between pathways
+    const links = [
+      { source: "Glycolysis-gluconeogenesis cycle", target: "Krebs cycle", strength: "strong", directional: true },
+      { source: "Krebs cycle", target: "Beta-oxidation of fatty acids", strength: "medium", directional: false },
+      { source: "Beta-oxidation of fatty acids", target: "Lipid metabolism and transport", strength: "strong", directional: true },
+      { source: "Acute-phase protein response", target: "Coagulation pathway", strength: "strong", directional: true },
+      { source: "Acute-phase protein response", target: "Complement cascade", strength: "medium", directional: true },
+      { source: "Hormone binding and transport", target: "Lipid metabolism and transport", strength: "medium", directional: false },
+      { source: "Protein metabolism", target: "Urea cycle", strength: "strong", directional: true },
+      { source: "Neurotransmitter metabolism", target: "Protein metabolism", strength: "medium", directional: false },
+      { source: "Oxidative stress", target: "Acute-phase protein response", strength: "strong", directional: true },
+      { source: "Glycolysis-gluconeogenesis cycle", target: "Oxidative stress", strength: "medium", directional: false }
+    ];
 
     function getCategory(pathway) {
       for (let [cat, paths] of Object.entries(categories)) {
@@ -383,32 +333,19 @@
 
     const width = 500, height = 500;
     let currentFilter = null;
-    let isClusterView = false;
     let selectedNode = null;
 
     const svg = d3.select("#network");
     
-    // More snappy simulation with stronger forces
+    // Create simulation
     const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id(d => d.id).distance(100).strength(0.8))
-      .force("charge", d3.forceManyBody().strength(-800))
+      .force("link", d3.forceLink(links).id(d => d.id).distance(80).strength(0.5))
+      .force("charge", d3.forceManyBody().strength(-600))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collide", d3.forceCollide(50))
-      .velocityDecay(0.6); // Increased damping for snappier movement
+      .force("collide", d3.forceCollide(40))
+      .velocityDecay(0.4);
 
-    // Create cluster hulls
-    const hullGroup = svg.append("g").attr("class", "hulls");
-
-    // Create link elements
-    const link = svg.append("g")
-      .selectAll("line")
-      .data(links)
-      .join("line")
-      .attr("class", "link")
-      .attr("stroke", d => d.strength === 'strong' ? '#e74c3c' : d.strength === 'medium' ? '#f39c12' : '#999')
-      .attr("marker-end", d => d.directional ? "url(#arrowhead)" : null);
-
-    // Add arrowhead marker for directional links
+    // Add arrowhead marker
     svg.append("defs").append("marker")
       .attr("id", "arrowhead")
       .attr("viewBox", "0 -5 10 10")
@@ -421,24 +358,36 @@
       .attr("d", "M0,-5L10,0L0,5")
       .attr("fill", "#666");
 
-    // Create node groups (rectangle + text as single unit)
+    // Create link elements
+    const link = svg.append("g")
+      .selectAll("line")
+      .data(links)
+      .enter().append("line")
+      .attr("class", "link")
+      .attr("stroke", d => d.strength === 'strong' ? '#e74c3c' : d.strength === 'medium' ? '#f39c12' : '#999')
+      .attr("marker-end", d => d.directional ? "url(#arrowhead)" : null);
+
+    // Create node groups
     const nodeGroup = svg.append("g")
       .selectAll("g")
       .data(nodes)
-      .join("g")
+      .enter().append("g")
       .attr("class", "node-group")
-      .call(drag(simulation))
+      .call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended))
       .on("click", handleNodeClick);
 
     // Add rectangles to node groups
     nodeGroup.append("rect")
       .attr("class", "node-rect")
-      .attr("width", d => Math.max(120, d.id.length * 8))
+      .attr("width", d => Math.max(120, d.id.length * 7))
       .attr("height", 40)
       .attr("rx", 8)
       .attr("ry", 8)
       .attr("fill", d => d.color)
-      .attr("x", d => -Math.max(60, d.id.length * 4))
+      .attr("x", d => -Math.max(60, d.id.length * 3.5))
       .attr("y", -20);
 
     // Add text to node groups
@@ -484,9 +433,6 @@
       
       // Get connected nodes
       const connectedNodes = getConnectedNodes(d.id);
-      const connectedLinks = links.filter(l => 
-        l.source.id === d.id || l.target.id === d.id
-      );
       
       // Highlight connected nodes
       nodeGroup.style("opacity", n => 
@@ -506,18 +452,6 @@
           }
         }
       });
-
-      // Center the selected node with smooth transition
-      const transform = d3.zoomIdentity
-        .translate(width / 2 - d.x, height / 2 - d.y)
-        .scale(1);
-        
-      svg.transition()
-        .duration(750)
-        .call(
-          d3.zoom().transform,
-          transform
-        );
 
       // Update biomarker display
       displayNodeDetails(d);
@@ -546,96 +480,49 @@
         </div>
       `;
       
-      d3.select("#biomarker-content").html(content);
+      document.getElementById("biomarker-content").innerHTML = content;
     }
 
     function updateStats(selectedNode) {
       const connected = getConnectedNodes(selectedNode.id);
       const biomarkerCount = biomarkerMap[selectedNode.id]?.length || 0;
       
-      d3.select("#stats").html(`
+      document.getElementById("stats").innerHTML = `
         <strong>${selectedNode.id}</strong><br>
         Connected pathways: ${connected.length}<br>
         Biomarkers: ${biomarkerCount}<br>
         Category: ${selectedNode.category}
-      `);
-    }
-
-    function updateClusterHulls() {
-      if (!isClusterView) {
-        hullGroup.selectAll("path").remove();
-        return;
-      }
-
-      const categoryNodes = {};
-      nodes.forEach(n => {
-        if (!categoryNodes[n.category]) categoryNodes[n.category] = [];
-        categoryNodes[n.category].push([n.x, n.y]);
-      });
-
-      Object.entries(categoryNodes).forEach(([category, points]) => {
-        if (points.length > 1) {
-          const hull = d3.polygonHull(points);
-          if (hull) {
-            const path = "M" + hull.join("L") + "Z";
-            
-            hullGroup.selectAll(`path.hull-${category.replace(/\s+/g, '-')}`)
-              .data([hull])
-              .join("path")
-              .attr("class", `cluster-hull hull-${category.replace(/\s+/g, '-')}`)
-              .attr("d", path)
-              .attr("stroke", categoryColors[category])
-              .attr("fill", categoryColors[category])
-              .attr("fill-opacity", 0.1);
-          }
-        }
-      });
+      `;
     }
 
     // Simulation tick
     simulation.on("tick", () => {
       link
-        .attr("x1", d => boundX(d.source.x))
-        .attr("y1", d => boundY(d.source.y))
-        .attr("x2", d => boundX(d.target.x))
-        .attr("y2", d => boundY(d.target.y));
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
 
       nodeGroup
-        .attr("transform", d => `translate(${d.x = boundX(d.x)}, ${d.y = boundY(d.y)})`);
-
-      updateClusterHulls();
+        .attr("transform", d => `translate(${d.x}, ${d.y})`);
     });
 
-    function boundX(x) { return Math.max(60, Math.min(width - 60, x)); }
-    function boundY(y) { return Math.max(30, Math.min(height - 30, y)); }
-
-    function drag(simulation) {
-      function dragstarted(event, d) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x; d.fy = d.y;
-      }
-      function dragged(event, d) {
-        d.fx = event.x; d.fy = event.y;
-      }
-      function dragended(event, d) {
-        if (!event.active) simulation.alphaTarget(0);
-        d.fx = null; d.fy = null;
-      }
-      return d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended);
+    function dragstarted(event, d) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
     }
 
-    // Add zoom behavior
-    const zoom = d3.zoom()
-      .scaleExtent([0.5, 3])
-      .on("zoom", (event) => {
-        const { transform } = event;
-        svg.selectAll("g").attr("transform", transform);
-      });
+    function dragged(event, d) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
 
-    svg.call(zoom);
+    function dragended(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
 
     // Body region click handlers
     d3.selectAll(".category").on("click", function() {
@@ -653,77 +540,12 @@
         visible.includes(d.source.id) && visible.includes(d.target.id) ? 0.8 : 0.05
       );
       
-      d3.select("#biomarker-content").html(`
+      document.getElementById("biomarker-content").innerHTML = `
         <div class="pathway-info">
           <h4 style="color: ${categoryColors[cat]};">${cat}</h4>
           <p>Pathways in this category: ${visible.join(", ")}</p>
         </div>
-      `);
-    });
-
-    // Cluster toggle
-    d3.select("#cluster").on("click", function() {
-      isClusterView = !isClusterView;
-      
-      if (isClusterView) {
-        // Add category-based clustering force
-        simulation.force("cluster", categoryCluster());
-        d3.select(this).text("Network View");
-      } else {
-        simulation.force("cluster", null);
-        d3.select(this).text("Cluster View");
-      }
-      
-      simulation.alpha(0.3).restart();
-    });
-
-    function categoryCluster() {
-      const clusterCenters = {
-        "Energy Metabolism": { x: 150, y: 350 },
-        "Lipid & Transport": { x: 350, y: 150 },
-        "Immune Response": { x: 150, y: 150 },
-        "Protein Processing": { x: 350, y: 350 },
-        "Cellular Regulation": { x: 250, y: 250 }
-      };
-      
-      return function(alpha) {
-        nodes.forEach(d => {
-          const cluster = clusterCenters[d.category];
-          if (cluster) {
-            const dx = cluster.x - d.x;
-            const dy = cluster.y - d.y;
-            d.vx += dx * alpha * 0.2;
-            d.vy += dy * alpha * 0.2;
-          }
-        });
-      };
-    }
-
-    // Search functionality
-    d3.select("#search").on("input", function() {
-      const searchTerm = this.value.toLowerCase();
-      
-      if (searchTerm === "") {
-        if (!currentFilter && !selectedNode) {
-          nodeGroup.style("opacity", 1);
-          link.style("opacity", 0.4);
-        }
-        return;
-      }
-      
-      nodeGroup.style("opacity", d => {
-        const pathwayMatch = d.id.toLowerCase().includes(searchTerm);
-        const biomarkerMatch = biomarkerMap[d.id]?.some(b => 
-          b.toLowerCase().includes(searchTerm)
-        );
-        return pathwayMatch || biomarkerMatch ? 1 : 0.1;
-      });
-      
-      link.style("opacity", l => {
-        const sourceVisible = l.source.id.toLowerCase().includes(searchTerm);
-        const targetVisible = l.target.id.toLowerCase().includes(searchTerm);
-        return sourceVisible || targetVisible ? 0.6 : 0.05;
-      });
+      `;
     });
 
     // Click outside to deselect
@@ -735,7 +557,24 @@
         link.classed("selected", false);
         link.classed("directional", false);
         link.classed("bidirectional", false);
-        link.style("opacity", 0.4);
+        link.style("opacity", 0.6);
         
-        d3.select("#biomarker-content").html(`
-          <p style="color: #7f
+        document.getElementById("biomarker-content").innerHTML = `
+          <p style="color: #7f8c8d; font-style: italic;">Click on a pathway to view biomarkers and detailed information.</p>
+        `;
+      }
+    });
+
+    // Add zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 3])
+      .on("zoom", (event) => {
+        const { transform } = event;
+        svg.selectAll("g").attr("transform", transform);
+      });
+
+    svg.call(zoom);
+
+  </script>
+</body>
+</html>
