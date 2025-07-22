@@ -5,32 +5,69 @@
   <title>Biological Pathways Network</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
-    body { font-family: sans-serif; display: flex; }
-    svg { border: 1px solid #ccc; }
-    #biomarkers { margin-left: 20px; max-width: 300px; }
-    .node { cursor: pointer; fill: steelblue; stroke: #fff; stroke-width: 1.5px; }
-    .link { stroke: #999; stroke-opacity: 0.6; }
-    text { pointer-events: none; }
+    body { font-family: sans-serif; display: flex; background: #f8f9fa; }
+    svg { border: 1px solid #ccc; background: white; }
+    #biomarkers { margin-left: 20px; max-width: 300px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .node { cursor: pointer; stroke: #fff; stroke-width: 2px; }
+    .link { stroke: #999; stroke-opacity: 0.6; stroke-width: 2px; }
+    .group-hull { fill: rgba(0,0,0,0.05); stroke: rgba(0,0,0,0.2); stroke-width: 1; stroke-dasharray: 5,5; }
+    .group-label { font-size: 14px; font-weight: bold; text-anchor: middle; fill: #555; }
+    .node-label { pointer-events: none; text-anchor: middle; dominant-baseline: middle; font-size: 11px; font-weight: 500; fill: white; }
+    .legend { font-size: 12px; }
+    .legend-item { margin-bottom: 5px; }
+    .legend-color { display: inline-block; width: 15px; height: 15px; margin-right: 8px; border-radius: 3px; }
   </style>
 </head>
 <body>
-  <svg width="800" height="600"></svg>
+  <svg width="1000" height="700"></svg>
   <div id="biomarkers">
-    <h3>Biomarkers</h3>
-    <ul id="biomarker-list"></ul>
+    <h3>Pathway Information</h3>
+    <div id="legend" class="legend">
+      <h4>Pathway Types:</h4>
+      <div id="legend-items"></div>
+    </div>
+    <div id="selected-pathway" style="margin-top: 20px;">
+      <h4>Biomarkers</h4>
+      <p><em>Click a pathway node to view its biomarkers</em></p>
+      <ul id="biomarker-list"></ul>
+    </div>
   </div>
 
   <script>
+    // Define pathway groups with colors
+    const pathwayGroups = {
+      "Energy Metabolism": {
+        color: "#2E8B57",
+        pathways: ["Glycolysis-gluconeogenesis cycle", "Krebs cycle", "Beta-oxidation of fatty acids"]
+      },
+      "Lipid & Transport": {
+        color: "#4682B4", 
+        pathways: ["Lipid metabolism and transport", "Hormone binding and transport"]
+      },
+      "Immune Response": {
+        color: "#DC143C",
+        pathways: ["Acute-phase protein response", "Complement cascade", "Coagulation pathway"]
+      },
+      "Protein Processing": {
+        color: "#9932CC",
+        pathways: ["Protein metabolism", "Urea cycle"]
+      },
+      "Cellular Regulation": {
+        color: "#FF8C00",
+        pathways: ["Neurotransmitter metabolism", "Oxidative stress"]
+      }
+    };
+
     const pathways = [
       "Acute-phase protein response",
-      "Beta-oxidation of fatty acids",
+      "Beta-oxidation of fatty acids", 
       "Coagulation pathway",
       "Complement cascade",
       "Glycolysis-gluconeogenesis cycle",
       "Hormone binding and transport",
       "Krebs cycle",
       "Lipid metabolism and transport",
-      "Neurotransmitter metabolism",
+      "Neurotransmitter metabolism", 
       "Oxidative stress",
       "Protein metabolism",
       "Urea cycle"
@@ -63,46 +100,162 @@
       "Urea cycle": ["Ornithine", "Glutamine", "Citrulline", "Aspartic acid", "Asparagine", "Arginine", "Acetyl-Ornithine"]
     };
 
-    const nodes = pathways.map(name => ({ id: name }));
-    const width = 800, height = 600;
+    // Helper function to get group for pathway
+    function getPathwayGroup(pathway) {
+      for (const [groupName, groupData] of Object.entries(pathwayGroups)) {
+        if (groupData.pathways.includes(pathway)) {
+          return { name: groupName, color: groupData.color };
+        }
+      }
+      return { name: "Other", color: "#808080" };
+    }
 
+    // Create nodes with group information
+    const nodes = pathways.map(name => {
+      const group = getPathwayGroup(name);
+      return { 
+        id: name, 
+        group: group.name,
+        color: group.color
+      };
+    });
+
+    const width = 1000, height = 700;
     const svg = d3.select("svg");
-    const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id(d => d.id).distance(140))
-      .force("charge", d3.forceManyBody().strength(-400))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collide", d3.forceCollide(40));
 
+    // Create legend
+    const legendItems = d3.select("#legend-items");
+    Object.entries(pathwayGroups).forEach(([groupName, groupData]) => {
+      const item = legendItems.append("div").attr("class", "legend-item");
+      item.append("span")
+        .attr("class", "legend-color")
+        .style("background-color", groupData.color);
+      item.append("span").text(groupName);
+    });
+
+    // Create simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).distance(120))
+      .force("charge", d3.forceManyBody().strength(-500))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collide", d3.forceCollide(80));
+
+    // Create group hulls
+    const groupHulls = svg.append("g").attr("class", "hulls");
+
+    // Create links
     const link = svg.append("g")
-      .attr("stroke", "#999")
-      .attr("stroke-opacity", 0.6)
       .selectAll("line")
       .data(links)
       .join("line")
       .attr("class", "link");
 
-    const node = svg.append("g")
-      .selectAll("circle")
+    // Create nodes as rounded rectangles
+    const nodeGroup = svg.append("g").selectAll("g")
       .data(nodes)
-      .join("circle")
-      .attr("class", "node")
-      .attr("r", 20)
+      .join("g")
+      .attr("class", "node-group")
       .call(drag(simulation))
       .on("click", (event, d) => {
         const biomarkers = biomarkerMap[d.id] || [];
+        d3.select("#selected-pathway h4").text(`${d.id} Biomarkers`);
         d3.select("#biomarker-list").html(
-          biomarkers.map(b => `<li>${b}</li>`).join("")
+          biomarkers.length > 0 ? 
+            biomarkers.map(b => `<li>${b}</li>`).join("") :
+            "<li><em>No biomarkers available</em></li>"
         );
       });
 
-    const label = svg.append("g")
-      .selectAll("text")
-      .data(nodes)
-      .join("text")
-      .text(d => d.id)
-      .attr("text-anchor", "middle")
-      .attr("dy", 4)
-      .style("font-size", "10px");
+    // Calculate text dimensions and create rectangles
+    nodeGroup.each(function(d) {
+      const text = d.id;
+      const words = text.split(/[\s-]/);
+      const maxWordsPerLine = 2;
+      const lines = [];
+      
+      for (let i = 0; i < words.length; i += maxWordsPerLine) {
+        lines.push(words.slice(i, i + maxWordsPerLine).join(' '));
+      }
+      
+      const lineHeight = 12;
+      const padding = 8;
+      const charWidth = 6;
+      const maxLineWidth = Math.max(...lines.map(line => line.length * charWidth));
+      
+      d.width = Math.max(maxLineWidth + padding * 2, 80);
+      d.height = lines.length * lineHeight + padding * 2;
+      d.lines = lines;
+    });
+
+    // Add rectangles
+    nodeGroup.append("rect")
+      .attr("class", "node")
+      .attr("width", d => d.width)
+      .attr("height", d => d.height)
+      .attr("x", d => -d.width / 2)
+      .attr("y", d => -d.height / 2)
+      .attr("rx", 8)
+      .attr("ry", 8)
+      .attr("fill", d => d.color);
+
+    // Add text labels with line breaks
+    nodeGroup.each(function(d) {
+      const group = d3.select(this);
+      d.lines.forEach((line, i) => {
+        group.append("text")
+          .attr("class", "node-label")
+          .attr("y", (i - (d.lines.length - 1) / 2) * 12)
+          .text(line);
+      });
+    });
+
+    // Update group hulls
+    function updateGroupHulls() {
+      const groupedNodes = d3.group(nodes, d => d.group);
+      
+      groupHulls.selectAll("path")
+        .data([...groupedNodes.entries()])
+        .join("path")
+        .attr("class", "group-hull")
+        .attr("d", ([groupName, groupNodes]) => {
+          if (groupNodes.length < 3) return null;
+          
+          const points = groupNodes.map(d => [d.x, d.y]);
+          const hull = d3.polygonHull(points);
+          
+          if (!hull) return null;
+          
+          // Expand hull outward
+          const centroid = d3.polygonCentroid(hull);
+          const expandedHull = hull.map(point => {
+            const dx = point[0] - centroid[0];
+            const dy = point[1] - centroid[1];
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const expandFactor = 1.5;
+            return [
+              centroid[0] + dx * expandFactor,
+              centroid[1] + dy * expandFactor
+            ];
+          });
+          
+          return `M${expandedHull.join("L")}Z`;
+        });
+
+      // Add group labels
+      svg.selectAll(".group-label")
+        .data([...groupedNodes.entries()])
+        .join("text")
+        .attr("class", "group-label")
+        .text(([groupName]) => groupName)
+        .attr("x", ([groupName, groupNodes]) => {
+          const avgX = d3.mean(groupNodes, d => d.x);
+          return avgX;
+        })
+        .attr("y", ([groupName, groupNodes]) => {
+          const minY = d3.min(groupNodes, d => d.y - d.height / 2);
+          return minY - 20;
+        });
+    }
 
     simulation.on("tick", () => {
       link
@@ -111,21 +264,22 @@
         .attr("x2", d => boundX(d.target.x))
         .attr("y2", d => boundY(d.target.y));
 
-      node
-        .attr("cx", d => d.x = boundX(d.x))
-        .attr("cy", d => d.y = boundY(d.y));
+      nodeGroup
+        .attr("transform", d => {
+          d.x = boundX(d.x);
+          d.y = boundY(d.y);
+          return `translate(${d.x},${d.y})`;
+        });
 
-      label
-        .attr("x", d => d.x)
-        .attr("y", d => d.y);
+      updateGroupHulls();
     });
 
     function boundX(x) {
-      return Math.max(30, Math.min(width - 30, x));
+      return Math.max(50, Math.min(width - 50, x));
     }
 
     function boundY(y) {
-      return Math.max(30, Math.min(height - 30, y));
+      return Math.max(50, Math.min(height - 50, y));
     }
 
     function drag(simulation) {
