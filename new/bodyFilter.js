@@ -1,5 +1,5 @@
 // Load your SVG into the #body div
-fetch('./assets/humanBody.svg')
+fetch('./assets/human-body.svg')
   .then(res => res.text())
   .then(svg => {
     document.getElementById('body').innerHTML = svg;
