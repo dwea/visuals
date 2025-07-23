@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <title>D3 Pathway Explorer</title>
   <style>
-    body { display: flex; height: 100vh; margin: 0; }
-    #body { flex: 0 0 200px; border-right: 1px solid #ccc; }
-    #network { flex: 1; border-right: 1px solid #ccc; }
-    #biomarkers { flex: 0 0 200px; overflow-y: auto; padding: 1em; }
+    body { display: flex; height: 100vh; margin: 0; font-family: sans-serif; }
+    #body { flex: 0 0 200px; border-right: 1px solid #ccc; overflow: auto; }
+    #network { flex: 1; border-right: 1px solid #ccc; background: #f9f9f9; }
+    #biomarkers { flex: 0 0 250px; overflow-y: auto; padding: 1em; }
   </style>
 </head>
 <body>
@@ -15,10 +15,7 @@
   <svg id="network" width="800" height="600"></svg>
   <div id="biomarkers"><h3>Biomarkers</h3><ul id="biomarker-list"></ul></div>
 
-  <!-- Load D3 -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
-
-  <!-- Load your modules -->
   <script src="./bodyFilter.js"></script>
   <script src="./networkGraph.js"></script>
   <script src="./biomarkerPanel.js"></script>
