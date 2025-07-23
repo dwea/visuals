@@ -2,6 +2,9 @@ const svg = d3.select('#network');
 const width = +svg.attr('width');
 const height = +svg.attr('height');
 
+// Define margin for bounds constraint
+const margin = 60;
+
 d3.json('./pathways.json').then(data => {
   const nodes = data.pathways;
   const links = data.connections.map(d => ({
@@ -9,15 +12,41 @@ d3.json('./pathways.json').then(data => {
     target: d.target,
     type: d.type,
     strength: d.strength,
-    description: d.description
+    description: d.description,
+    // Add direction property for directional connection types
+    hasDirection: d.type === 'metabolic_flow' || d.type === 'precursor'
   }));
+
+  // Create arrowhead markers for directional links
+  const defs = svg.append('defs');
+  
+  // Create arrowhead markers for each connection type that has direction
+  const arrowTypes = [
+    { type: 'metabolic_flow', color: '#ff7f0e' },
+    { type: 'precursor', color: '#9467bd' }
+  ];
+
+  arrowTypes.forEach(arrow => {
+    defs.append('marker')
+      .attr('id', `arrowhead-${arrow.type}`)
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 8)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-5L10,0L0,5')
+      .attr('fill', arrow.color)
+      .attr('opacity', 0.8);
+  });
 
   // Create color scales for different connection types
   const linkColorScale = d3.scaleOrdinal()
     .domain(['metabolic_flow', 'functional', 'shared_biomarkers', 'precursor'])
     .range(['#ff7f0e', '#2ca02c', '#d62728', '#9467bd']);
 
-  // Create simulation with clustering forces
+  // Create simulation with clustering forces and bounds constraint
   const simulation = d3.forceSimulation(nodes)
     .force('link', d3.forceLink(links)
       .id(d => d.id)
@@ -30,6 +59,33 @@ d3.json('./pathways.json').then(data => {
     .force('collision', d3.forceCollide()
       .radius(d => Math.max(80, d.id.length * 4 + 40))
       .strength(0.7))
+    // Boundary constraint force
+    .force('boundary', function() {
+      nodes.forEach(node => {
+        const nodeWidth = Math.max(100, node.id.length * 8 + 30);
+        const nodeHeight = 45;
+        
+        // Constrain x position
+        if (node.x < margin + nodeWidth/2) {
+          node.x = margin + nodeWidth/2;
+          node.vx = Math.abs(node.vx || 0) * 0.1; // Bounce back gently
+        }
+        if (node.x > width - margin - nodeWidth/2) {
+          node.x = width - margin - nodeWidth/2;
+          node.vx = -Math.abs(node.vx || 0) * 0.1; // Bounce back gently
+        }
+        
+        // Constrain y position
+        if (node.y < margin + nodeHeight/2) {
+          node.y = margin + nodeHeight/2;
+          node.vy = Math.abs(node.vy || 0) * 0.1; // Bounce back gently
+        }
+        if (node.y > height - margin - nodeHeight/2) {
+          node.y = height - margin - nodeHeight/2;
+          node.vy = -Math.abs(node.vy || 0) * 0.1; // Bounce back gently
+        }
+      });
+    })
     // Group clustering force - pulls nodes of same group together
     .force('group', function(alpha) {
       const groups = d3.group(nodes, d => d.group);
@@ -64,7 +120,7 @@ d3.json('./pathways.json').then(data => {
       });
     });
 
-  // Create links with different styles based on type
+  // Create links with different styles based on type and add arrowheads
   const link = svg.append('g')
     .attr('class', 'links')
     .selectAll('line')
@@ -76,6 +132,13 @@ d3.json('./pathways.json').then(data => {
     .attr('stroke-dasharray', d => {
       if (d.type === 'shared_biomarkers') return '5,5';
       if (d.type === 'precursor') return '3,3';
+      return null;
+    })
+    .attr('marker-end', d => {
+      // Add arrowheads only for directional connection types
+      if (d.hasDirection) {
+        return `url(#arrowhead-${d.type})`;
+      }
       return null;
     });
 
@@ -240,13 +303,36 @@ d3.json('./pathways.json').then(data => {
   link.append('title').text(d => 
     `${d.source.id} ↔ ${d.target.id}\nType: ${d.type}\nStrength: ${d.strength}\n${d.description}`);
 
-  // Animation loop
+  // Animation loop with boundary enforcement
   simulation.on('tick', () => {
+    // Update link positions, accounting for arrowhead offset
     link
       .attr('x1', d => d.source.x)
       .attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x)
-      .attr('y2', d => d.target.y);
+      .attr('x2', d => {
+        if (d.hasDirection) {
+          // Shorten line to accommodate arrowhead
+          const dx = d.target.x - d.source.x;
+          const dy = d.target.y - d.source.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          const targetRadius = Math.max(50, d.target.id.length * 4 + 20);
+          const shortenBy = targetRadius + 8; // 8 for arrowhead size
+          return d.target.x - (dx / length) * shortenBy;
+        }
+        return d.target.x;
+      })
+      .attr('y2', d => {
+        if (d.hasDirection) {
+          // Shorten line to accommodate arrowhead
+          const dx = d.target.x - d.source.x;
+          const dy = d.target.y - d.source.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          const targetRadius = Math.max(50, d.target.id.length * 4 + 20);
+          const shortenBy = targetRadius + 8; // 8 for arrowhead size
+          return d.target.y - (dy / length) * shortenBy;
+        }
+        return d.target.y;
+      });
 
     // Position link labels at midpoint
     linkLabels
@@ -275,16 +361,16 @@ d3.json('./pathways.json').then(data => {
       .attr('y', 12);
   });
 
-  // Add legend for connection types
+  // Add legend for connection types (updated to show arrows)
   const legend = svg.append('g')
     .attr('class', 'legend')
     .attr('transform', `translate(20, 20)`);
 
   const legendData = [
-    { type: 'metabolic_flow', label: 'Metabolic Flow', color: '#ff7f0e' },
-    { type: 'functional', label: 'Functional', color: '#2ca02c' },
-    { type: 'shared_biomarkers', label: 'Shared Biomarkers', color: '#d62728', dash: '5,5' },
-    { type: 'precursor', label: 'Precursor', color: '#9467bd', dash: '3,3' }
+    { type: 'metabolic_flow', label: 'Metabolic Flow →', color: '#ff7f0e', hasArrow: true },
+    { type: 'functional', label: 'Functional', color: '#2ca02c', hasArrow: false },
+    { type: 'shared_biomarkers', label: 'Shared Biomarkers', color: '#d62728', dash: '5,5', hasArrow: false },
+    { type: 'precursor', label: 'Precursor →', color: '#9467bd', dash: '3,3', hasArrow: true }
   ];
 
   const legendItems = legend.selectAll('.legend-item')
@@ -295,12 +381,13 @@ d3.json('./pathways.json').then(data => {
 
   legendItems.append('line')
     .attr('x1', 0)
-    .attr('x2', 20)
+    .attr('x2', d => d.hasArrow ? 15 : 20)
     .attr('y1', 0)
     .attr('y2', 0)
     .attr('stroke', d => d.color)
     .attr('stroke-width', 3)
-    .attr('stroke-dasharray', d => d.dash || null);
+    .attr('stroke-dasharray', d => d.dash || null)
+    .attr('marker-end', d => d.hasArrow ? `url(#arrowhead-${d.type})` : null);
 
   legendItems.append('text')
     .attr('x', 25)
