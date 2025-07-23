@@ -1,3 +1,9 @@
+d3.json('./pathways.json').then(data => {
+  console.log(data);
+  // nodes = data
+});
+
+
 // Example nodes & links: for now, make a dummy version
 const pathways = [
   { id: 'Acute-phase protein response', group: 'Immune' },
