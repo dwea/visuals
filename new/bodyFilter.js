@@ -1,7 +1,14 @@
-fetch('./assets/human-body.svg')
+// Load the SVG file and set up event listeners for body regions
+
+  fetch('./assets/human-body.svg')
   .then(res => res.text())
   .then(svg => {
-    document.getElementById('body').innerHTML = svg;
+    const bodyContainer = document.getElementById('body');
+    bodyContainer.innerHTML = svg;
+    
+    // Center the content horizontally
+    bodyContainer.style.display = 'flex';
+    bodyContainer.style.justifyContent = 'center';
 
     document.querySelectorAll('#body svg [id]').forEach(region => {
       region.style.cursor = 'pointer';
