@@ -20,53 +20,113 @@ d3.json('./pathways.json').then(data => {
     .domain(['metabolic_flow', 'functional', 'shared_biomarkers', 'precursor'])
     .range(['#ff7f0e', '#2ca02c', '#d62728', '#9467bd']);
 
-  // Create simulation with clustering forces and bounds constraint
+  // Group colors for hulls
+  const groupColors = {
+    'Immune': '#4e79a7',
+    'Metabolism': '#59a14f', 
+    'Transport': '#edc949',
+    'Stress': '#e15759'
+  };
+
+  // Create hull container (needs to be behind nodes)
+  const hullContainer = svg.append('g').attr('class', 'hulls');
+
+  // Function to calculate convex hull using d3.polygonHull
+  function calculateHulls() {
+    const groups = d3.group(nodes, d => d.group);
+    const hulls = [];
+    
+    groups.forEach((groupNodes, groupName) => {
+      if (groupNodes.length < 3) return; // Need at least 3 points for a meaningful hull
+      
+      // Get node positions with padding
+      const points = groupNodes.map(d => {
+        const rectWidth = Math.max(100, d.id.length * 8 + 30);
+        const rectHeight = 45;
+        const padding = 20; // Extra space around nodes
+        
+        return [
+          [d.clampedX - rectWidth/2 - padding, d.clampedY - rectHeight/2 - padding],
+          [d.clampedX + rectWidth/2 + padding, d.clampedY - rectHeight/2 - padding],
+          [d.clampedX + rectWidth/2 + padding, d.clampedY + rectHeight/2 + padding],
+          [d.clampedX - rectWidth/2 - padding, d.clampedY + rectHeight/2 + padding]
+        ];
+      }).flat();
+      
+      const hull = d3.polygonHull(points);
+      if (hull) {
+        hulls.push({
+          group: groupName,
+          hull: hull,
+          nodes: groupNodes,
+          centroid: d3.polygonCentroid(hull)
+        });
+      }
+    });
+    
+    return hulls;
+  }
+
+  // Function to check if two hulls overlap
+  function hullsOverlap(hull1, hull2) {
+    // Simple distance-based check between centroids
+    const dx = hull1.centroid[0] - hull2.centroid[0];
+    const dy = hull1.centroid[1] - hull2.centroid[1];
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Estimate hull sizes for separation threshold
+    const size1 = Math.sqrt(Math.abs(d3.polygonArea(hull1.hull)));
+    const size2 = Math.sqrt(Math.abs(d3.polygonArea(hull2.hull)));
+    const minSeparation = (size1 + size2) * 0.3;
+    
+    return distance < minSeparation;
+  }
+
+  // Create simulation with enhanced clustering and hull separation forces
   const simulation = d3.forceSimulation(nodes)
     .force('link', d3.forceLink(links)
       .id(d => d.id)
-      .distance(d => 150 - (d.strength * 50)) // Stronger connections = shorter distance
+      .distance(d => 150 - (d.strength * 50))
       .strength(d => d.strength * 0.5))
     .force('charge', d3.forceManyBody()
-      .strength(-800)
-      .distanceMax(400))
+      .strength(-600) // Reduced to allow tighter clustering
+      .distanceMax(300))
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force('collision', d3.forceCollide()
       .radius(d => Math.max(80, d.id.length * 4 + 40))
-      .strength(0.9) // Increased collision strength to prevent overlap
-      .iterations(3)) // Multiple iterations for better collision resolution
-    // Boundary constraint force - gentle positioning without bouncing
+      .strength(0.7)
+      .iterations(2))
+    // Boundary constraint force
     .force('boundary', function(alpha) {
       nodes.forEach(node => {
         const nodeWidth = Math.max(100, node.id.length * 8 + 30);
         const nodeHeight = 45;
-        const dampingFactor = 0.05 * alpha; // Gentle force that decreases with simulation cooling
+        const dampingFactor = 0.05 * alpha;
         
-        // Constrain x position with gentle force
         if (node.x < margin + nodeWidth/2) {
           const pushForce = (margin + nodeWidth/2 - node.x) * dampingFactor;
           node.vx = (node.vx || 0) + pushForce;
-          if (node.vx < 0) node.vx *= 0.8; // Dampen opposing velocity
+          if (node.vx < 0) node.vx *= 0.8;
         }
         if (node.x > width - margin - nodeWidth/2) {
           const pushForce = (width - margin - nodeWidth/2 - node.x) * dampingFactor;
           node.vx = (node.vx || 0) + pushForce;
-          if (node.vx > 0) node.vx *= 0.8; // Dampen opposing velocity
+          if (node.vx > 0) node.vx *= 0.8;
         }
         
-        // Constrain y position with gentle force
         if (node.y < margin + nodeHeight/2) {
           const pushForce = (margin + nodeHeight/2 - node.y) * dampingFactor;
           node.vy = (node.vy || 0) + pushForce;
-          if (node.vy < 0) node.vy *= 0.8; // Dampen opposing velocity
+          if (node.vy < 0) node.vy *= 0.8;
         }
         if (node.y > height - margin - nodeHeight/2) {
           const pushForce = (height - margin - nodeHeight/2 - node.y) * dampingFactor;
           node.vy = (node.vy || 0) + pushForce;
-          if (node.vy > 0) node.vy *= 0.8; // Dampen opposing velocity
+          if (node.vy > 0) node.vy *= 0.8;
         }
       });
     })
-    // Group clustering force - pulls nodes of same group together
+    // Enhanced group clustering force
     .force('group', function(alpha) {
       const groups = d3.group(nodes, d => d.group);
       const groupCenters = new Map();
@@ -84,7 +144,7 @@ d3.json('./pathways.json').then(data => {
         });
       });
       
-      // Apply clustering force
+      // Apply stronger clustering force
       nodes.forEach(node => {
         const center = groupCenters.get(node.group);
         if (center && center.x && center.y) {
@@ -92,12 +152,50 @@ d3.json('./pathways.json').then(data => {
           const dy = center.y - (node.y || 0);
           const distance = Math.sqrt(dx * dx + dy * dy);
           if (distance > 0) {
-            const force = alpha * 0.1;
-            node.vx = (node.vx || 0) + dx * force * 0.1;
-            node.vy = (node.vy || 0) + dy * force * 0.1;
+            const force = alpha * 0.3; // Increased clustering strength
+            node.vx = (node.vx || 0) + dx * force * 0.3;
+            node.vy = (node.vy || 0) + dy * force * 0.3;
           }
         }
       });
+    })
+    // Hull separation force
+    .force('hullSeparation', function(alpha) {
+      if (alpha < 0.1) return; // Only apply when simulation is still active
+      
+      const hulls = calculateHulls();
+      const separationForce = alpha * 0.2;
+      
+      // Check each pair of hulls for overlap
+      for (let i = 0; i < hulls.length; i++) {
+        for (let j = i + 1; j < hulls.length; j++) {
+          const hull1 = hulls[i];
+          const hull2 = hulls[j];
+          
+          if (hullsOverlap(hull1, hull2)) {
+            // Calculate separation vector
+            const dx = hull1.centroid[0] - hull2.centroid[0];
+            const dy = hull1.centroid[1] - hull2.centroid[1];
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 0) {
+              const normalizedDx = dx / distance;
+              const normalizedDy = dy / distance;
+              
+              // Apply separation force to all nodes in both groups
+              hull1.nodes.forEach(node => {
+                node.vx = (node.vx || 0) + normalizedDx * separationForce;
+                node.vy = (node.vy || 0) + normalizedDy * separationForce;
+              });
+              
+              hull2.nodes.forEach(node => {
+                node.vx = (node.vx || 0) - normalizedDx * separationForce;
+                node.vy = (node.vy || 0) - normalizedDy * separationForce;
+              });
+            }
+          }
+        }
+      }
     });
 
   // Create simple connecting lines
@@ -137,23 +235,15 @@ d3.json('./pathways.json').then(data => {
     .attr('height', 45)
     .attr('rx', 8)
     .attr('ry', 8)
-    .attr('fill', d => {
-      const groupColors = {
-        'Immune': '#4e79a7',
-        'Metabolism': '#59a14f', 
-        'Transport': '#edc949',
-        'Stress': '#e15759'
-      };
-      return groupColors[d.group] || '#cccccc';
-    })
+    .attr('fill', d => groupColors[d.group] || '#cccccc')
     .attr('stroke', d => {
-      const groupColors = {
+      const groupStrokeColors = {
         'Immune': '#2c5882',
         'Metabolism': '#3d7a3d',
         'Transport': '#b8a23a',
         'Stress': '#b23e3f'
       };
-      return groupColors[d.group] || '#999999';
+      return groupStrokeColors[d.group] || '#999999';
     })
     .attr('stroke-width', 2)
     .attr('filter', 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))');
@@ -198,13 +288,11 @@ d3.json('./pathways.json').then(data => {
   // Enhanced hover effects
   nodeGroup
     .on('mouseover', function(event, d) {
-      // Highlight the node
       d3.select(this).select('rect')
         .attr('stroke-width', 4)
         .transition().duration(200)
         .attr('transform', 'scale(1.05)');
       
-      // Highlight connected links
       link
         .transition().duration(200)
         .attr('stroke-opacity', l => 
@@ -212,13 +300,11 @@ d3.json('./pathways.json').then(data => {
         .attr('stroke-width', l => 
           (l.source.id === d.id || l.target.id === d.id) ? 4 : 2);
       
-      // Show link labels for connected edges
       linkLabels
         .transition().duration(200)
         .style('opacity', l => 
           (l.source.id === d.id || l.target.id === d.id) ? 1 : 0);
       
-      // Highlight connected nodes
       nodeGroup
         .transition().duration(200)
         .style('opacity', n => {
@@ -230,13 +316,11 @@ d3.json('./pathways.json').then(data => {
         });
     })
     .on('mouseout', function(event, d) {
-      // Reset node appearance
       d3.select(this).select('rect')
         .attr('stroke-width', 2)
         .transition().duration(200)
         .attr('transform', 'scale(1)');
       
-      // Reset all elements
       link
         .transition().duration(200)
         .attr('stroke-opacity', 0.6)
@@ -270,9 +354,9 @@ d3.json('./pathways.json').then(data => {
   link.append('title').text(d => 
     `${d.source.id} ↔ ${d.target.id}\nType: ${d.type}\nStrength: ${d.strength}\n${d.description}`);
 
-  // Animation loop with boundary enforcement
+  // Animation loop with hull updates
   simulation.on('tick', () => {
-    // First, clamp node positions to bounds (same logic as node positioning)
+    // Clamp node positions to bounds
     nodes.forEach(node => {
       const rectWidth = Math.max(100, node.id.length * 8 + 30);
       const rectHeight = 45;
@@ -282,10 +366,28 @@ d3.json('./pathways.json').then(data => {
       const minY = margin + rectHeight/2;
       const maxY = height - margin - rectHeight/2;
       
-      // Store the clamped positions
       node.clampedX = Math.max(minX, Math.min(maxX, node.x));
       node.clampedY = Math.max(minY, Math.min(maxY, node.y));
     });
+
+    // Update hull paths
+    const hulls = calculateHulls();
+    const hullSelection = hullContainer
+      .selectAll('path')
+      .data(hulls, d => d.group);
+    
+    hullSelection.enter()
+      .append('path')
+      .attr('fill', d => groupColors[d.group] || '#cccccc')
+      .attr('fill-opacity', 0.1)
+      .attr('stroke', d => groupColors[d.group] || '#cccccc')
+      .attr('stroke-width', 2)
+      .attr('stroke-opacity', 0.4)
+      .attr('stroke-dasharray', '5,5')
+      .merge(hullSelection)
+      .attr('d', d => d.hull ? `M${d.hull.join('L')}Z` : '');
+    
+    hullSelection.exit().remove();
 
     // Update link positions using clamped coordinates
     link
