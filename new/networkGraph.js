@@ -272,34 +272,39 @@ d3.json('./pathways.json').then(data => {
 
   // Animation loop with boundary enforcement
   simulation.on('tick', () => {
-    // Update link positions to connect rectangle centers
-    link
-      .attr('x1', d => d.source.x)
-      .attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x)
-      .attr('y2', d => d.target.y);
-
-    // Position link labels at midpoint
-    linkLabels
-      .attr('x', d => (d.source.x + d.target.x) / 2)
-      .attr('y', d => (d.source.y + d.target.y) / 2);
-
-    // Position node groups with proper boundary enforcement
-    nodeGroup.attr('transform', d => {
-      const rectWidth = Math.max(100, d.id.length * 8 + 30);
+    // First, clamp node positions to bounds (same logic as node positioning)
+    nodes.forEach(node => {
+      const rectWidth = Math.max(100, node.id.length * 8 + 30);
       const rectHeight = 45;
       
-      // Ensure nodes stay completely within bounds
       const minX = margin + rectWidth/2;
       const maxX = width - margin - rectWidth/2;
       const minY = margin + rectHeight/2;
       const maxY = height - margin - rectHeight/2;
       
-      // Clamp position to bounds
-      d.x = Math.max(minX, Math.min(maxX, d.x));
-      d.y = Math.max(minY, Math.min(maxY, d.y));
+      // Store the clamped positions
+      node.clampedX = Math.max(minX, Math.min(maxX, node.x));
+      node.clampedY = Math.max(minY, Math.min(maxY, node.y));
+    });
+
+    // Update link positions using clamped coordinates
+    link
+      .attr('x1', d => d.source.clampedX)
+      .attr('y1', d => d.source.clampedY)
+      .attr('x2', d => d.target.clampedX)
+      .attr('y2', d => d.target.clampedY);
+
+    // Position link labels at midpoint using clamped coordinates
+    linkLabels
+      .attr('x', d => (d.source.clampedX + d.target.clampedX) / 2)
+      .attr('y', d => (d.source.clampedY + d.target.clampedY) / 2);
+
+    // Position node groups using clamped coordinates
+    nodeGroup.attr('transform', d => {
+      const rectWidth = Math.max(100, d.id.length * 8 + 30);
+      const rectHeight = 45;
       
-      return `translate(${d.x - rectWidth/2}, ${d.y - rectHeight/2})`;
+      return `translate(${d.clampedX - rectWidth/2}, ${d.clampedY - rectHeight/2})`;
     });
 
     // Position text at center of rectangle
