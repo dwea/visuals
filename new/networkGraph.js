@@ -12,34 +12,8 @@ d3.json('./pathways.json').then(data => {
     target: d.target,
     type: d.type,
     strength: d.strength,
-    description: d.description,
-    // Add direction property for directional connection types
-    hasDirection: d.type === 'metabolic_flow' || d.type === 'precursor'
+    description: d.description
   }));
-
-  // Create arrowhead markers for directional links
-  const defs = svg.append('defs');
-  
-  // Create arrowhead markers for each connection type that has direction
-  const arrowTypes = [
-    { type: 'metabolic_flow', color: '#ff7f0e' },
-    { type: 'precursor', color: '#9467bd' }
-  ];
-
-  arrowTypes.forEach(arrow => {
-    defs.append('marker')
-      .attr('id', `arrowhead-${arrow.type}`)
-      .attr('viewBox', '0 -5 10 10')
-      .attr('refX', 8)
-      .attr('refY', 0)
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
-      .attr('orient', 'auto')
-      .append('path')
-      .attr('d', 'M0,-5L10,0L0,5')
-      .attr('fill', arrow.color)
-      .attr('opacity', 0.8);
-  });
 
   // Create color scales for different connection types
   const linkColorScale = d3.scaleOrdinal()
@@ -126,27 +100,15 @@ d3.json('./pathways.json').then(data => {
       });
     });
 
-  // Create links with different styles based on type and add arrowheads
+  // Create simple connecting lines
   const link = svg.append('g')
     .attr('class', 'links')
     .selectAll('line')
     .data(links)
     .join('line')
-    .attr('stroke', d => linkColorScale(d.type))
-    .attr('stroke-width', d => Math.max(1, d.strength * 4))
-    .attr('stroke-opacity', 0.7)
-    .attr('stroke-dasharray', d => {
-      if (d.type === 'shared_biomarkers') return '5,5';
-      if (d.type === 'precursor') return '3,3';
-      return null;
-    })
-    .attr('marker-end', d => {
-      // Add arrowheads only for directional connection types
-      if (d.hasDirection) {
-        return `url(#arrowhead-${d.type})`;
-      }
-      return null;
-    });
+    .attr('stroke', '#999')
+    .attr('stroke-width', 2)
+    .attr('stroke-opacity', 0.6);
 
   // Add link labels for connection types
   const linkLabels = svg.append('g')
@@ -248,8 +210,7 @@ d3.json('./pathways.json').then(data => {
         .attr('stroke-opacity', l => 
           (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.1)
         .attr('stroke-width', l => 
-          (l.source.id === d.id || l.target.id === d.id) ? 
-          Math.max(2, l.strength * 6) : Math.max(1, l.strength * 4));
+          (l.source.id === d.id || l.target.id === d.id) ? 4 : 2);
       
       // Show link labels for connected edges
       linkLabels
@@ -278,8 +239,8 @@ d3.json('./pathways.json').then(data => {
       // Reset all elements
       link
         .transition().duration(200)
-        .attr('stroke-opacity', 0.7)
-        .attr('stroke-width', l => Math.max(1, l.strength * 4));
+        .attr('stroke-opacity', 0.6)
+        .attr('stroke-width', 2);
       
       linkLabels
         .transition().duration(200)
@@ -311,64 +272,12 @@ d3.json('./pathways.json').then(data => {
 
   // Animation loop with boundary enforcement
   simulation.on('tick', () => {
-    // Update link positions, connecting to node edges
+    // Update link positions to connect rectangle centers
     link
-      .attr('x1', d => {
-        // Calculate edge of source node
-        const dx = d.target.x - d.source.x;
-        const dy = d.target.y - d.source.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        if (length === 0) return d.source.x;
-        
-        const sourceWidth = Math.max(100, d.source.id.length * 8 + 30);
-        const sourceHeight = 45;
-        const sourceRadius = Math.sqrt((sourceWidth/2)**2 + (sourceHeight/2)**2);
-        
-        return d.source.x + (dx / length) * (sourceRadius * 0.7);
-      })
-      .attr('y1', d => {
-        // Calculate edge of source node
-        const dx = d.target.x - d.source.x;
-        const dy = d.target.y - d.source.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        if (length === 0) return d.source.y;
-        
-        const sourceWidth = Math.max(100, d.source.id.length * 8 + 30);
-        const sourceHeight = 45;
-        const sourceRadius = Math.sqrt((sourceWidth/2)**2 + (sourceHeight/2)**2);
-        
-        return d.source.y + (dy / length) * (sourceRadius * 0.7);
-      })
-      .attr('x2', d => {
-        // Calculate edge of target node
-        const dx = d.target.x - d.source.x;
-        const dy = d.target.y - d.source.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        if (length === 0) return d.target.x;
-        
-        const targetWidth = Math.max(100, d.target.id.length * 8 + 30);
-        const targetHeight = 45;
-        const targetRadius = Math.sqrt((targetWidth/2)**2 + (targetHeight/2)**2);
-        
-        // For arrows, leave space for arrowhead
-        const arrowOffset = d.hasDirection ? 8 : 0;
-        return d.target.x - (dx / length) * (targetRadius * 0.7 + arrowOffset);
-      })
-      .attr('y2', d => {
-        // Calculate edge of target node
-        const dx = d.target.x - d.source.x;
-        const dy = d.target.y - d.source.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        if (length === 0) return d.target.y;
-        
-        const targetWidth = Math.max(100, d.target.id.length * 8 + 30);
-        const targetHeight = 45;
-        const targetRadius = Math.sqrt((targetWidth/2)**2 + (targetHeight/2)**2);
-        
-        // For arrows, leave space for arrowhead
-        const arrowOffset = d.hasDirection ? 8 : 0;
-        return d.target.y - (dy / length) * (targetRadius * 0.7 + arrowOffset);
-      });
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
 
     // Position link labels at midpoint
     linkLabels
@@ -407,43 +316,6 @@ d3.json('./pathways.json').then(data => {
       .attr('x', d => Math.max(100, d.id.length * 8 + 30) - 12)
       .attr('y', 12);
   });
-
-  // Add legend for connection types (updated to show arrows)
-  const legend = svg.append('g')
-    .attr('class', 'legend')
-    .attr('transform', `translate(20, 20)`);
-
-  const legendData = [
-    { type: 'metabolic_flow', label: 'Metabolic Flow →', color: '#ff7f0e', hasArrow: true },
-    { type: 'functional', label: 'Functional', color: '#2ca02c', hasArrow: false },
-    { type: 'shared_biomarkers', label: 'Shared Biomarkers', color: '#d62728', dash: '5,5', hasArrow: false },
-    { type: 'precursor', label: 'Precursor →', color: '#9467bd', dash: '3,3', hasArrow: true }
-  ];
-
-  const legendItems = legend.selectAll('.legend-item')
-    .data(legendData)
-    .join('g')
-    .attr('class', 'legend-item')
-    .attr('transform', (d, i) => `translate(0, ${i * 20})`);
-
-  legendItems.append('line')
-    .attr('x1', 0)
-    .attr('x2', d => d.hasArrow ? 15 : 20)
-    .attr('y1', 0)
-    .attr('y2', 0)
-    .attr('stroke', d => d.color)
-    .attr('stroke-width', 3)
-    .attr('stroke-dasharray', d => d.dash || null)
-    .attr('marker-end', d => d.hasArrow ? `url(#arrowhead-${d.type})` : null);
-
-  legendItems.append('text')
-    .attr('x', 25)
-    .attr('y', 0)
-    .attr('dy', '0.35em')
-    .attr('font-family', 'Arial, sans-serif')
-    .attr('font-size', '12px')
-    .attr('fill', '#333')
-    .text(d => d.label);
 
   // Drag functionality
   function drag(simulation) {
