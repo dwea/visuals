@@ -311,33 +311,63 @@ d3.json('./pathways.json').then(data => {
 
   // Animation loop with boundary enforcement
   simulation.on('tick', () => {
-    // Update link positions, accounting for arrowhead offset
+    // Update link positions, connecting to node edges
     link
-      .attr('x1', d => d.source.x)
-      .attr('y1', d => d.source.y)
+      .attr('x1', d => {
+        // Calculate edge of source node
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length === 0) return d.source.x;
+        
+        const sourceWidth = Math.max(100, d.source.id.length * 8 + 30);
+        const sourceHeight = 45;
+        const sourceRadius = Math.sqrt((sourceWidth/2)**2 + (sourceHeight/2)**2);
+        
+        return d.source.x + (dx / length) * (sourceRadius * 0.7);
+      })
+      .attr('y1', d => {
+        // Calculate edge of source node
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length === 0) return d.source.y;
+        
+        const sourceWidth = Math.max(100, d.source.id.length * 8 + 30);
+        const sourceHeight = 45;
+        const sourceRadius = Math.sqrt((sourceWidth/2)**2 + (sourceHeight/2)**2);
+        
+        return d.source.y + (dy / length) * (sourceRadius * 0.7);
+      })
       .attr('x2', d => {
-        if (d.hasDirection) {
-          // Shorten line to accommodate arrowhead
-          const dx = d.target.x - d.source.x;
-          const dy = d.target.y - d.source.y;
-          const length = Math.sqrt(dx * dx + dy * dy);
-          const targetRadius = Math.max(50, d.target.id.length * 4 + 20);
-          const shortenBy = targetRadius + 8; // 8 for arrowhead size
-          return d.target.x - (dx / length) * shortenBy;
-        }
-        return d.target.x;
+        // Calculate edge of target node
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length === 0) return d.target.x;
+        
+        const targetWidth = Math.max(100, d.target.id.length * 8 + 30);
+        const targetHeight = 45;
+        const targetRadius = Math.sqrt((targetWidth/2)**2 + (targetHeight/2)**2);
+        
+        // For arrows, leave space for arrowhead
+        const arrowOffset = d.hasDirection ? 8 : 0;
+        return d.target.x - (dx / length) * (targetRadius * 0.7 + arrowOffset);
       })
       .attr('y2', d => {
-        if (d.hasDirection) {
-          // Shorten line to accommodate arrowhead
-          const dx = d.target.x - d.source.x;
-          const dy = d.target.y - d.source.y;
-          const length = Math.sqrt(dx * dx + dy * dy);
-          const targetRadius = Math.max(50, d.target.id.length * 4 + 20);
-          const shortenBy = targetRadius + 8; // 8 for arrowhead size
-          return d.target.y - (dy / length) * shortenBy;
-        }
-        return d.target.y;
+        // Calculate edge of target node
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length === 0) return d.target.y;
+        
+        const targetWidth = Math.max(100, d.target.id.length * 8 + 30);
+        const targetHeight = 45;
+        const targetRadius = Math.sqrt((targetWidth/2)**2 + (targetHeight/2)**2);
+        
+        // For arrows, leave space for arrowhead
+        const arrowOffset = d.hasDirection ? 8 : 0;
+        return d.target.y - (dy / length) * (targetRadius * 0.7 + arrowOffset);
       });
 
     // Position link labels at midpoint
@@ -345,10 +375,21 @@ d3.json('./pathways.json').then(data => {
       .attr('x', d => (d.source.x + d.target.x) / 2)
       .attr('y', d => (d.source.y + d.target.y) / 2);
 
-    // Position node groups
+    // Position node groups with proper boundary enforcement
     nodeGroup.attr('transform', d => {
       const rectWidth = Math.max(100, d.id.length * 8 + 30);
       const rectHeight = 45;
+      
+      // Ensure nodes stay completely within bounds
+      const minX = margin + rectWidth/2;
+      const maxX = width - margin - rectWidth/2;
+      const minY = margin + rectHeight/2;
+      const maxY = height - margin - rectHeight/2;
+      
+      // Clamp position to bounds
+      d.x = Math.max(minX, Math.min(maxX, d.x));
+      d.y = Math.max(minY, Math.min(maxY, d.y));
+      
       return `translate(${d.x - rectWidth/2}, ${d.y - rectHeight/2})`;
     });
 
