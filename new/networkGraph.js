@@ -58,31 +58,37 @@ d3.json('./pathways.json').then(data => {
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force('collision', d3.forceCollide()
       .radius(d => Math.max(80, d.id.length * 4 + 40))
-      .strength(0.7))
-    // Boundary constraint force
-    .force('boundary', function() {
+      .strength(0.9) // Increased collision strength to prevent overlap
+      .iterations(3)) // Multiple iterations for better collision resolution
+    // Boundary constraint force - gentle positioning without bouncing
+    .force('boundary', function(alpha) {
       nodes.forEach(node => {
         const nodeWidth = Math.max(100, node.id.length * 8 + 30);
         const nodeHeight = 45;
+        const dampingFactor = 0.05 * alpha; // Gentle force that decreases with simulation cooling
         
-        // Constrain x position
+        // Constrain x position with gentle force
         if (node.x < margin + nodeWidth/2) {
-          node.x = margin + nodeWidth/2;
-          node.vx = Math.abs(node.vx || 0) * 0.1; // Bounce back gently
+          const pushForce = (margin + nodeWidth/2 - node.x) * dampingFactor;
+          node.vx = (node.vx || 0) + pushForce;
+          if (node.vx < 0) node.vx *= 0.8; // Dampen opposing velocity
         }
         if (node.x > width - margin - nodeWidth/2) {
-          node.x = width - margin - nodeWidth/2;
-          node.vx = -Math.abs(node.vx || 0) * 0.1; // Bounce back gently
+          const pushForce = (width - margin - nodeWidth/2 - node.x) * dampingFactor;
+          node.vx = (node.vx || 0) + pushForce;
+          if (node.vx > 0) node.vx *= 0.8; // Dampen opposing velocity
         }
         
-        // Constrain y position
+        // Constrain y position with gentle force
         if (node.y < margin + nodeHeight/2) {
-          node.y = margin + nodeHeight/2;
-          node.vy = Math.abs(node.vy || 0) * 0.1; // Bounce back gently
+          const pushForce = (margin + nodeHeight/2 - node.y) * dampingFactor;
+          node.vy = (node.vy || 0) + pushForce;
+          if (node.vy < 0) node.vy *= 0.8; // Dampen opposing velocity
         }
         if (node.y > height - margin - nodeHeight/2) {
-          node.y = height - margin - nodeHeight/2;
-          node.vy = -Math.abs(node.vy || 0) * 0.1; // Bounce back gently
+          const pushForce = (height - margin - nodeHeight/2 - node.y) * dampingFactor;
+          node.vy = (node.vy || 0) + pushForce;
+          if (node.vy > 0) node.vy *= 0.8; // Dampen opposing velocity
         }
       });
     })
