@@ -387,7 +387,7 @@
                 config.column.biomarkerX, config.spacing.biomarkerStartY, config.spacing.biomarkerHeight,
                 config.spacing.biomarkerVerticalSpacing, config.column.width,
                 'url(#biomarkerGradient)', config.textOffset.biomarkerX, config.textOffset.biomarkerY,
-                d => `● ${d.name}`,
+                d => `${d.name}`,
                 function(event, d) { selectBiomarker(d.id); } // Click handler
             );
 
