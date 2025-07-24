@@ -45,7 +45,7 @@
         .process-item, .biomarker-item, .health-item {
             padding: 12px 16px;
             margin: 6px 0;
-            border-radius: 8px;
+            border-radius: 2px;
             cursor: pointer;
             transition: all 0.3s ease;
             font-size: 13px;
@@ -55,12 +55,12 @@
         }
         
         .process-item {
-            background: linear-gradient(90deg, #3498db, #2980b9);
+            background: linear-gradient(0deg, #9fd1f2, #6fb8e9);
             color: white;
         }
         
         .biomarker-item {
-            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            background: linear-gradient(0deg, #bed8f5, #a1c7f2);
             color: white;
             border: 2px solid #c0392b;
         }
@@ -72,14 +72,14 @@
         }
         
         .biomarker-item.selected {
-            background: linear-gradient(90deg, #f39c12, #e67e22);
+            background: linear-gradient(0deg,#82b4ee, #2c86ed);
             border-color: #d68910;
             transform: scale(1.05);
             box-shadow: 0 10px 20px rgba(243, 156, 18, 0.4);
         }
         
         .health-item {
-            background: linear-gradient(90deg, #27ae60, #229954);
+            background: linear-gradient(0deg, #b2e1c6, #90e8b5);
             color: white;
         }
         
@@ -163,36 +163,36 @@
         // Data structure
         const data = {
             processes: [
-                { id: 'cycle1', name: 'Cycle 1', icon: '🔄' },
-                { id: 'cycle2', name: 'Cycle 2', icon: '🔄' },
-                { id: 'krebs', name: 'Krebs Cycle', icon: '🔄' },
-                { id: 'pathway1', name: 'Pathway 1', icon: '🛤️' },
-                { id: 'pathway2', name: 'Pathway 2', icon: '🛤️' },
-                { id: 'pathway3', name: 'Pathway 3', icon: '🛤️' },
-                { id: 'cascade1', name: 'Cascade 1', icon: '⚡' },
-                { id: 'cascade2', name: 'Cascade 2', icon: '⚡' },
-                { id: 'cascade3', name: 'Cascade 3', icon: '⚡' },
-                { id: 'health1', name: 'Health Area 1', icon: '🏥' },
-                { id: 'adhoc', name: 'Ad Hoc Collection', icon: '📊' },
-                { id: 'diabetes', name: 'Diabetes Factors', icon: '🩺' }
+                { id: 'pathway1', name: 'Beta oxidation of fatty acids', icon: '🔄' },
+                { id: 'pathway2', name: 'Amino acid metabolism', icon: '🔄' },
+                { id: 'pathway3', name: 'Coagulation pathway', icon: '🔄' },
+                { id: 'pathway4', name: 'Urea cycle', icon: '🛤️' },
+                { id: 'pathway5', name: 'Glycolysis', icon: '🛤️' },
+                { id: 'pathway6', name: 'Lipid metabolism', icon: '🛤️' },
+                { id: 'pathway7', name: 'Complement cascade', icon: '⚡' },
+                { id: 'pathway8', name: 'Cascade 2', icon: '⚡' },
+                { id: 'pathway9', name: 'Cascade 3', icon: '⚡' },
+                { id: 'pathway10', name: 'Health Area 1', icon: '🏥' },
+                { id: 'pathway11', name: 'Ad Hoc Collection', icon: '📊' },
+                { id: 'pathway12', name: 'Pathway Factors', icon: '🩺' }
             ],
             biomarkers: [
-                { id: 'bm1', name: 'Biomarker 1' },
-                { id: 'bm2', name: 'Biomarker 2' },
-                { id: 'bm3', name: 'Biomarker 3' },
-                { id: 'bm4', name: 'Biomarker 4' },
-                { id: 'bm5', name: 'Biomarker 5' },
-                { id: 'bm6', name: 'Biomarker 6' }
+                { id: 'bm1', name: 'Tyrosine' },
+                { id: 'bm2', name: 'Histadine' },
+                { id: 'bm3', name: 'Asparagine' },
+                { id: 'bm4', name: 'Pyruvic acid' },
+                { id: 'bm5', name: 'Threonine' },
+                { id: 'bm6', name: 'Serine' }
             ],
             healthAreas: [
-                { id: 'ha1', name: 'Health Area 1' },
-                { id: 'ha2', name: 'Health Area 2' },
-                { id: 'ha3', name: 'Health Area 3' },
-                { id: 'ha4', name: 'Health Area 4' },
-                { id: 'ha5', name: 'Health Area 5' },
-                { id: 'ha6', name: 'Health Area 6' },
-                { id: 'ha7', name: 'Health Area 7' },
-                { id: 'ha8', name: 'Health Area 8' }
+                { id: 'ha1', name: 'Alzheimer’s Disease' },
+                { id: 'ha2', name: 'Cognitive Health' },
+                { id: 'ha3', name: 'Inflammation' },
+                { id: 'ha4', name: 'Dietary Health' },
+                { id: 'ha5', name: 'Diabetes' },
+                { id: 'ha6', name: 'Cardiovascular Disease' },
+                { id: 'ha7', name: 'Inflammatory Bowel Disease' },
+                { id: 'ha8', name: 'Liver Disease' }
             ]
         };
 
@@ -200,9 +200,9 @@
         const relationships = {
             bm1: {
                 processes: [
-                    { id: 'cycle1', strength: 8 },
-                    { id: 'pathway1', strength: 2 },
-                    { id: 'cascade1', strength: 7 }
+                    { id: 'pathway1', strength: 8 },
+                    { id: 'pathway4', strength: 2 },
+                    { id: 'pathway7', strength: 7 }
                 ],
                 healthAreas: [
                     { id: 'ha1', strength: 9 },
@@ -212,9 +212,9 @@
             },
             bm2: {
                 processes: [
-                    { id: 'cycle2', strength: 7 },
-                    { id: 'krebs', strength: 9 },
-                    { id: 'cascade2', strength: 2 }
+                    { id: 'pathway2', strength: 7 },
+                    { id: 'pathway3', strength: 9 },
+                    { id: 'pathway8', strength: 2 }
                 ],
                 healthAreas: [
                     { id: 'ha2', strength: 8 },
@@ -224,9 +224,9 @@
             },
             bm3: {
                 processes: [
-                    { id: 'pathway2', strength: 8 },
-                    { id: 'cascade3', strength: 7 },
-                    { id: 'diabetes', strength: 4 }
+                    { id: 'pathway5', strength: 8 },
+                    { id: 'pathway9', strength: 7 },
+                    { id: 'pathway12', strength: 4 }
                 ],
                 healthAreas: [
                     { id: 'ha1', strength: 3 },
@@ -236,9 +236,9 @@
             },
             bm4: {
                 processes: [
-                    { id: 'cycle1', strength: 3 },
-                    { id: 'pathway3', strength: 8 },
-                    { id: 'adhoc', strength: 6 }
+                    { id: 'pathway1', strength: 3 },
+                    { id: 'pathway6', strength: 8 },
+                    { id: 'pathway11', strength: 6 }
                 ],
                 healthAreas: [
                     { id: 'ha3', strength: 7 },
@@ -248,9 +248,9 @@
             },
             bm5: {
                 processes: [
-                    { id: 'krebs', strength: 7 },
-                    { id: 'cascade1', strength: 8 },
-                    { id: 'health1', strength: 6 }
+                    { id: 'pathway3', strength: 7 },
+                    { id: 'pathway7', strength: 8 },
+                    { id: 'pathway10', strength: 6 }
                 ],
                 healthAreas: [
                     { id: 'ha1', strength: 8 },
@@ -260,9 +260,9 @@
             },
             bm6: {
                 processes: [
-                    { id: 'cycle2', strength: 6 },
-                    { id: 'pathway1', strength: 7 },
-                    { id: 'cascade3', strength: 8 }
+                    { id: 'pathway2', strength: 6 },
+                    { id: 'pathway4', strength: 7 },
+                    { id: 'pathway9', strength: 8 }
                 ],
                 healthAreas: [
                     { id: 'ha2', strength: 1 },
