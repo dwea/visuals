@@ -49,11 +49,6 @@
         .link {
             fill: none;
             stroke-opacity: 0; /* Default hidden */
-            transition: all 0.5s ease;
-        }
-
-        .link.active {
-            stroke-opacity: 0.7; /* Active state */
         }
 
         .reset-btn {
@@ -249,7 +244,9 @@
                 minStrokeWidth: 2,
                 strengthMultiplier: 1.5,
                 controlOffsetMultiplier: 0.5,
-                transitionDuration: 500
+                transitionDuration: 500,
+                dashArray: '10, 5', // For marching ants
+                dashAnimationSpeed: 750 // Lower is faster
             },
             colors: {
                 processGradientStart: '#3498db', processGradientEnd: '#2980b9',
@@ -283,6 +280,35 @@
                 gradient.append('stop').attr('offset', '0%').attr('stop-color', g.start);
                 gradient.append('stop').attr('offset', '100%').attr('stop-color', g.end);
             });
+        }
+        
+        // Helper to define SVG markers (arrowheads)
+        function defineMarkers(defs) {
+            // Arrowhead for links to processes (pointing left)
+            defs.append('marker')
+                .attr('id', 'arrowhead-process')
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', -5) // Position at the start of the line
+                .attr('refY', 0)
+                .attr('markerWidth', 5)
+                .attr('markerHeight', 5)
+                .attr('orient', 'auto-start-reverse')
+                .append('path')
+                .attr('d', 'M10,-5L0,0L10,5')
+                .style('fill', config.colors.processLink);
+
+            // Arrowhead for links to health areas (pointing right)
+            defs.append('marker')
+                .attr('id', 'arrowhead-health')
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 15) // Position at the end of the line
+                .attr('refY', 0)
+                .attr('markerWidth', 5)
+                .attr('markerHeight', 5)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('d', 'M0,-5L10,0L0,5')
+                .style('fill', config.colors.healthLink);
         }
 
         // Helper to create a column of items (processes, biomarkers, health areas)
@@ -334,9 +360,10 @@
             // Clear existing content
             svg.selectAll('*').remove();
 
-            // Define gradients
+            // Define gradients and markers
             const defs = svg.append('defs');
             defineGradients(defs);
+            defineMarkers(defs);
 
             // Create groups for each column (order matters for layering: links behind nodes)
             const linkGroup = svg.append('g').attr('class', 'links');
@@ -458,8 +485,8 @@
                 });
             }
         }
-
-        // The drawSigmoidLink function
+        
+        // The updated drawSigmoidLink function with animations
         function drawSigmoidLink(x1, y1, x2, y2, strength, color, className) {
             const strokeWidth = Math.max(config.link.minStrokeWidth, strength * config.link.strengthMultiplier);
 
@@ -473,18 +500,42 @@
 
             const pathData = `M ${x1},${y1} C ${cp1x},${cp1y} ${cp2x},${cp2y} ${x2},${y2}`;
 
-            svg.select('.links')
+            const path = svg.select('.links')
                 .append('path')
-                .attr('class', `link ${className} active`)
+                .attr('class', `link ${className}`)
                 .attr('d', pathData)
                 .style('stroke', color)
                 .style('stroke-width', strokeWidth)
+                .style('stroke-dasharray', config.link.dashArray) // Add dash pattern
                 .style('stroke-opacity', 0)
-                .style('fill', 'none')
-                .style('transition', `stroke-opacity ${config.link.transitionDuration / 1000}s ease`)
-                .transition()
+                .style('fill', 'none');
+
+            // Apply arrowheads based on class
+            if (className === 'to-process') {
+                path.attr('marker-start', 'url(#arrowhead-process)');
+            } else if (className === 'to-health') {
+                path.attr('marker-end', 'url(#arrowhead-health)');
+            }
+
+            // --- Animation Sequence ---
+
+            // 1. Recursive function for the "marching ants" animation
+            function animateDash() {
+                path.transition()
+                    .duration(config.link.dashAnimationSpeed)
+                    .ease(d3.easeLinear)
+                    .attr('stroke-dashoffset', -20) // Animate to the length of the dash pattern
+                    .transition()
+                    .duration(0)
+                    .attr('stroke-dashoffset', 0) // Reset instantly
+                    .on('end', animateDash); // Loop
+            }
+
+            // 2. Fade in the link first
+            path.transition()
                 .duration(config.link.transitionDuration)
-                .style('stroke-opacity', 0.7);
+                .style('stroke-opacity', 0.7)
+                .on('end', animateDash); // 3. Start marching ants after fade-in
         }
 
         // Reset function
@@ -493,7 +544,9 @@
             svg.selectAll('.process-rect, .health-rect').style('stroke', 'none').style('stroke-width', 0);
             svg.selectAll('.biomarker-rect').style('fill', 'url(#biomarkerGradient)');
 
+            // Stop all animations and remove links
             svg.select('.links').selectAll('.link')
+                .interrupt() // Stop any ongoing transitions
                 .transition()
                 .duration(config.link.transitionDuration / 2)
                 .style('stroke-opacity', 0)
