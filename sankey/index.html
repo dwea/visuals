@@ -43,9 +43,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Styles for the D3-rendered rectangles and text are handled by inline styles in JS for now,
-           but could be moved to classes as suggested previously for better maintainability. */
-
         .link {
             fill: none;
             stroke-opacity: 0; /* Default hidden */
@@ -246,7 +243,7 @@
                 controlOffsetMultiplier: 0.5,
                 transitionDuration: 500,
                 dashArray: '10, 5', // For marching ants
-                dashAnimationSpeed: 750 // Lower is faster
+                dashAnimationSpeed: 1000 // Lower is faster
             },
             colors: {
                 processGradientStart: '#3498db', processGradientEnd: '#2980b9',
@@ -280,35 +277,6 @@
                 gradient.append('stop').attr('offset', '0%').attr('stop-color', g.start);
                 gradient.append('stop').attr('offset', '100%').attr('stop-color', g.end);
             });
-        }
-        
-        // Helper to define SVG markers (arrowheads)
-        function defineMarkers(defs) {
-            // Arrowhead for links to processes (pointing left)
-            defs.append('marker')
-                .attr('id', 'arrowhead-process')
-                .attr('viewBox', '0 -5 10 10')
-                .attr('refX', -5) // Position at the start of the line
-                .attr('refY', 0)
-                .attr('markerWidth', 5)
-                .attr('markerHeight', 5)
-                .attr('orient', 'auto-start-reverse')
-                .append('path')
-                .attr('d', 'M10,-5L0,0L10,5')
-                .style('fill', config.colors.processLink);
-
-            // Arrowhead for links to health areas (pointing right)
-            defs.append('marker')
-                .attr('id', 'arrowhead-health')
-                .attr('viewBox', '0 -5 10 10')
-                .attr('refX', 15) // Position at the end of the line
-                .attr('refY', 0)
-                .attr('markerWidth', 5)
-                .attr('markerHeight', 5)
-                .attr('orient', 'auto')
-                .append('path')
-                .attr('d', 'M0,-5L10,0L0,5')
-                .style('fill', config.colors.healthLink);
         }
 
         // Helper to create a column of items (processes, biomarkers, health areas)
@@ -360,10 +328,9 @@
             // Clear existing content
             svg.selectAll('*').remove();
 
-            // Define gradients and markers
+            // Define gradients
             const defs = svg.append('defs');
             defineGradients(defs);
-            defineMarkers(defs);
 
             // Create groups for each column (order matters for layering: links behind nodes)
             const linkGroup = svg.append('g').attr('class', 'links');
@@ -443,6 +410,7 @@
 
             // Remove existing links with a fade-out
             svg.select('.links').selectAll('.link')
+                .interrupt() // Stop animations before removing
                 .transition()
                 .duration(config.link.transitionDuration / 2)
                 .style('stroke-opacity', 0)
@@ -486,7 +454,7 @@
             }
         }
         
-        // The updated drawSigmoidLink function with animations
+        // The updated drawSigmoidLink function with corrected animations
         function drawSigmoidLink(x1, y1, x2, y2, strength, color, className) {
             const strokeWidth = Math.max(config.link.minStrokeWidth, strength * config.link.strengthMultiplier);
 
@@ -506,55 +474,22 @@
                 .attr('d', pathData)
                 .style('stroke', color)
                 .style('stroke-width', strokeWidth)
-                .style('stroke-dasharray', config.link.dashArray) // Add dash pattern
+                .style('stroke-dasharray', config.link.dashArray)
                 .style('stroke-opacity', 0)
                 .style('fill', 'none');
 
-            // Apply arrowheads based on class
-            if (className === 'to-process') {
-                path.attr('marker-start', 'url(#arrowhead-process)');
-            } else if (className === 'to-health') {
-                path.attr('marker-end', 'url(#arrowhead-health)');
-            }
-
             // --- Animation Sequence ---
 
-            // 1. Recursive function for the "marching ants" animation
+            // Calculate the total length of the dash pattern for a seamless loop
+            const dashPatternLength = config.link.dashArray
+                .split(',')
+                .map(s => parseFloat(s.trim()))
+                .reduce((a, b) => a + b);
+
+            // Determine animation direction based on link type
+            // Positive offset for right-to-left animation, negative for left-to-right
+            const targetOffset = className === 'to-process' ? dashPatternLength : -dashPatternLength;
+
+            // Recursive function for the "marching ants" animation
             function animateDash() {
-                path.transition()
-                    .duration(config.link.dashAnimationSpeed)
-                    .ease(d3.easeLinear)
-                    .attr('stroke-dashoffset', -20) // Animate to the length of the dash pattern
-                    .transition()
-                    .duration(0)
-                    .attr('stroke-dashoffset', 0) // Reset instantly
-                    .on('end', animateDash); // Loop
-            }
-
-            // 2. Fade in the link first
-            path.transition()
-                .duration(config.link.transitionDuration)
-                .style('stroke-opacity', 0.7)
-                .on('end', animateDash); // 3. Start marching ants after fade-in
-        }
-
-        // Reset function
-        function resetSelection() {
-            selectedBiomarker = null;
-            svg.selectAll('.process-rect, .health-rect').style('stroke', 'none').style('stroke-width', 0);
-            svg.selectAll('.biomarker-rect').style('fill', 'url(#biomarkerGradient)');
-
-            // Stop all animations and remove links
-            svg.select('.links').selectAll('.link')
-                .interrupt() // Stop any ongoing transitions
-                .transition()
-                .duration(config.link.transitionDuration / 2)
-                .style('stroke-opacity', 0)
-                .remove();
-        }
-
-        // Initialize the visualization on page load
-        initializeVisualization();
-    </script>
-</body>
-</html>
+                d3.select(
