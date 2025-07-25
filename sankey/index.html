@@ -214,7 +214,7 @@
             }
         };
 
-        // --- Configuration Object (Improved for maintainability) ---
+        // --- Configuration Object ---
         const config = {
             svg: { width: 1340, height: 600 },
             column: {
@@ -279,7 +279,7 @@
             });
         }
 
-        // Helper to create a column of items (processes, biomarkers, health areas)
+        // Helper to create a column of items
         function createColumn(group, itemsData, type, xPos, startY, itemHeight, verticalSpacing, width, rectFill, textOffsetX, textOffsetY, textFormatter, clickHandler = null) {
             const itemGroups = group.selectAll(`.${type}-item-group`)
                 .data(itemsData)
@@ -311,11 +311,10 @@
                 .style('font-weight', '500')
                 .text(textFormatter);
 
-            // Store calculated y-position for easier link drawing
             itemsData.forEach((d, i) => d.yCenter = startY + i * verticalSpacing + itemHeight / 2);
         }
 
-        // Function to highlight a specific node (process or health area)
+        // Function to highlight a specific node
         function highlightNode(selector, id, highlight) {
             svg.selectAll(selector)
                 .filter(d => d.id === id)
@@ -325,130 +324,51 @@
 
         // Main initialization function
         function initializeVisualization() {
-            // Clear existing content
             svg.selectAll('*').remove();
-
-            // Define gradients
             const defs = svg.append('defs');
             defineGradients(defs);
 
-            // Create groups for each column (order matters for layering: links behind nodes)
             const linkGroup = svg.append('g').attr('class', 'links');
             const processGroup = svg.append('g').attr('class', 'processes');
             const biomarkerGroup = svg.append('g').attr('class', 'biomarkers');
             const healthGroup = svg.append('g').attr('class', 'health-areas');
 
             // Column headers
-            svg.append('text')
-                .attr('x', config.column.processX + config.column.width / 2)
-                .attr('y', config.spacing.headerY)
-                .attr('class', 'column-header')
-                .style('text-anchor', 'middle')
-                .style('font-size', '16px')
-                .style('fill', config.colors.headerText)
-                .text('Metabolic Processes');
+            svg.append('text').attr('x', config.column.processX + config.column.width / 2).attr('y', config.spacing.headerY).attr('class', 'column-header').style('text-anchor', 'middle').style('font-size', '16px').style('fill', config.colors.headerText).text('Metabolic Processes');
+            svg.append('text').attr('x', config.column.biomarkerX + config.column.width / 2).attr('y', config.spacing.headerY).attr('class', 'column-header').style('text-anchor', 'middle').style('font-size', '16px').style('fill', config.colors.headerText).text('Biomarkers');
+            svg.append('text').attr('x', config.column.healthX + config.column.width / 2).attr('y', config.spacing.headerY).attr('class', 'column-header').style('text-anchor', 'middle').style('font-size', '16px').style('fill', config.colors.headerText).text('Health Areas');
 
-            svg.append('text')
-                .attr('x', config.column.biomarkerX + config.column.width / 2)
-                .attr('y', config.spacing.headerY)
-                .attr('class', 'column-header')
-                .style('text-anchor', 'middle')
-                .style('font-size', '16px')
-                .style('fill', config.colors.headerText)
-                .text('Biomarkers');
-
-            svg.append('text')
-                .attr('x', config.column.healthX + config.column.width / 2)
-                .attr('y', config.spacing.headerY)
-                .attr('class', 'column-header')
-                .style('text-anchor', 'middle')
-                .style('font-size', '16px')
-                .style('fill', config.colors.headerText)
-                .text('Health Areas');
-
-            // Create process items
-            createColumn(
-                processGroup, data.processes, 'process',
-                config.column.processX, config.spacing.itemStartY, config.spacing.itemHeight,
-                config.spacing.itemVerticalSpacing, config.column.width,
-                'url(#processGradient)', config.textOffset.processX, config.textOffset.processY,
-                d => `${d.icon} ${d.name}`
-            );
-
-            // Create biomarker items
-            createColumn(
-                biomarkerGroup, data.biomarkers, 'biomarker',
-                config.column.biomarkerX, config.spacing.biomarkerStartY, config.spacing.biomarkerHeight,
-                config.spacing.biomarkerVerticalSpacing, config.column.width,
-                'url(#biomarkerGradient)', config.textOffset.biomarkerX, config.textOffset.biomarkerY,
-                d => `${d.name}`,
-                function(event, d) { selectBiomarker(d.id); } // Click handler
-            );
-
-            // Create health area items
-            createColumn(
-                healthGroup, data.healthAreas, 'health',
-                config.column.healthX, config.spacing.itemStartY, config.spacing.itemHeight,
-                config.spacing.itemVerticalSpacing, config.column.width,
-                'url(#healthGradient)', config.textOffset.healthX, config.textOffset.healthY,
-                d => d.name
-            );
+            createColumn(processGroup, data.processes, 'process', config.column.processX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#processGradient)', config.textOffset.processX, config.textOffset.processY, d => `${d.icon} ${d.name}`);
+            createColumn(biomarkerGroup, data.biomarkers, 'biomarker', config.column.biomarkerX, config.spacing.biomarkerStartY, config.spacing.biomarkerHeight, config.spacing.biomarkerVerticalSpacing, config.column.width, 'url(#biomarkerGradient)', config.textOffset.biomarkerX, config.textOffset.biomarkerY, d => `${d.name}`, function(event, d) { selectBiomarker(d.id); });
+            createColumn(healthGroup, data.healthAreas, 'health', config.column.healthX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#healthGradient)', config.textOffset.healthX, config.textOffset.healthY, d => d.name);
         }
 
         // Function to handle biomarker selection
         function selectBiomarker(biomarkerId) {
             selectedBiomarker = biomarkerId;
-
-            // Reset all highlighting
             svg.selectAll('.process-rect, .health-rect').style('stroke', 'none').style('stroke-width', 0);
             svg.selectAll('.biomarker-rect').style('fill', 'url(#biomarkerGradient)');
-
-            // Highlight selected biomarker
-            svg.selectAll('.biomarker-rect')
-                .filter(d => d.id === biomarkerId)
-                .style('fill', 'url(#selectedGradient)');
-
-            // Remove existing links with a fade-out
-            svg.select('.links').selectAll('.link')
-                .interrupt() // Stop animations before removing
-                .transition()
-                .duration(config.link.transitionDuration / 2)
-                .style('stroke-opacity', 0)
-                .remove();
+            svg.selectAll('.biomarker-rect').filter(d => d.id === biomarkerId).style('fill', 'url(#selectedGradient)');
+            svg.select('.links').selectAll('.link').interrupt().transition().duration(config.link.transitionDuration / 2).style('stroke-opacity', 0).remove();
 
             if (relationships[biomarkerId]) {
                 const rel = relationships[biomarkerId];
                 const selectedBmNode = data.biomarkers.find(b => b.id === biomarkerId);
+                if (!selectedBmNode) return;
 
-                if (!selectedBmNode) return; // Defensive check
-
-                // Highlight connected processes and draw links
                 rel.processes.forEach(proc => {
                     highlightNode('.process-rect', proc.id, true);
                     const processNode = data.processes.find(p => p.id === proc.id);
                     if (processNode) {
-                        drawSigmoidLink(
-                            config.column.processX + config.column.width, processNode.yCenter,
-                            config.column.biomarkerX, selectedBmNode.yCenter,
-                            proc.strength,
-                            config.colors.processLink,
-                            'to-process'
-                        );
+                        drawSigmoidLink(config.column.processX + config.column.width, processNode.yCenter, config.column.biomarkerX, selectedBmNode.yCenter, proc.strength, config.colors.processLink, 'to-process');
                     }
                 });
 
-                // Highlight connected health areas and draw links
                 rel.healthAreas.forEach(health => {
                     highlightNode('.health-rect', health.id, true);
                     const healthNode = data.healthAreas.find(h => h.id === health.id);
                     if (healthNode) {
-                        drawSigmoidLink(
-                            config.column.biomarkerX + config.column.width, selectedBmNode.yCenter,
-                            config.column.healthX, healthNode.yCenter,
-                            health.strength,
-                            config.colors.healthLink,
-                            'to-health'
-                        );
+                        drawSigmoidLink(config.column.biomarkerX + config.column.width, selectedBmNode.yCenter, config.column.healthX, healthNode.yCenter, health.strength, config.colors.healthLink, 'to-health');
                     }
                 });
             }
@@ -457,15 +377,12 @@
         // The updated drawSigmoidLink function with corrected animations
         function drawSigmoidLink(x1, y1, x2, y2, strength, color, className) {
             const strokeWidth = Math.max(config.link.minStrokeWidth, strength * config.link.strengthMultiplier);
-
             const dx = x2 - x1;
             const controlOffset = Math.abs(dx) * config.link.controlOffsetMultiplier;
-
             const cp1x = x1 + controlOffset;
             const cp1y = y1;
             const cp2x = x2 - controlOffset;
             const cp2y = y2;
-
             const pathData = `M ${x1},${y1} C ${cp1x},${cp1y} ${cp2x},${cp2y} ${x2},${y2}`;
 
             const path = svg.select('.links')
@@ -479,17 +396,37 @@
                 .style('fill', 'none');
 
             // --- Animation Sequence ---
-
-            // Calculate the total length of the dash pattern for a seamless loop
-            const dashPatternLength = config.link.dashArray
-                .split(',')
-                .map(s => parseFloat(s.trim()))
-                .reduce((a, b) => a + b);
-
-            // Determine animation direction based on link type
-            // Positive offset for right-to-left animation, negative for left-to-right
+            const dashPatternLength = config.link.dashArray.split(',').map(s => parseFloat(s.trim())).reduce((a, b) => a + b);
             const targetOffset = className === 'to-process' ? dashPatternLength : -dashPatternLength;
 
-            // Recursive function for the "marching ants" animation
+            // Stable, closure-based recursive animation function
             function animateDash() {
-                d3.select(
+                path.transition()
+                    .duration(config.link.dashAnimationSpeed)
+                    .ease(d3.easeLinear)
+                    .attr('stroke-dashoffset', targetOffset)
+                    .transition()
+                    .duration(0)
+                    .attr('stroke-dashoffset', 0)
+                    .on('end', animateDash);
+            }
+            
+            path.transition()
+                .duration(config.link.transitionDuration)
+                .style('stroke-opacity', 0.7)
+                .on('end', animateDash);
+        }
+
+        // Reset function
+        function resetSelection() {
+            selectedBiomarker = null;
+            svg.selectAll('.process-rect, .health-rect').style('stroke', 'none').style('stroke-width', 0);
+            svg.selectAll('.biomarker-rect').style('fill', 'url(#biomarkerGradient)');
+            svg.select('.links').selectAll('.link').interrupt().transition().duration(config.link.transitionDuration / 2).style('stroke-opacity', 0).remove();
+        }
+
+        // Initialize the visualization on page load
+        initializeVisualization();
+    </script>
+</body>
+</html>
