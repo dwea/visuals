@@ -375,13 +375,14 @@
             // Integrate biomarkerMiniGraph if it's a biomarker column
             if (type === 'biomarker') {
                 const graphComponent = biomarkerMiniGraph(); // Create an instance of the component
+                const graphWidth = 60; // From biomarkerMiniGraph config
+                const graphPadding = 2; // From biomarkerMiniGraph config
 
                 itemGroups.append('g') // Append a new group for the graph
                     .attr('transform', (d, i) => {
-                        // Position the graph to the right of the biomarker name
-                        const textLength = d.name.length * 8; // Estimate text width (adjust as needed)
-                        const graphOffsetX = xPos + textOffsetX + textLength + 10; // 10px spacing
-                        const graphOffsetY = startY + i * verticalSpacing + 8; // Vertically center within the biomarker rect
+                        // Position the graph to the right of the biomarker box
+                        const graphOffsetX = xPos + width - graphWidth - graphPadding - 10; // 10px from right edge
+                        const graphOffsetY = startY + i * verticalSpacing + (itemHeight - (8 + graphPadding * 2)) / 2; // Vertically center the graph (graphHeight is 8, padding is 2)
                         return `translate(${graphOffsetX}, ${graphOffsetY})`;
                     })
                     .call(graphComponent); // Call the component on this new group
