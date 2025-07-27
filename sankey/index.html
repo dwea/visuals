@@ -381,7 +381,7 @@
                 itemGroups.append('g') // Append a new group for the graph
                     .attr('transform', (d, i) => {
                         // Position the graph to the right of the biomarker box
-                        const graphOffsetX = xPos + width - graphWidth - graphPadding - 10; // 10px from right edge
+                        const graphOffsetX = xPos + width - graphWidth - graphPadding - 10 - 50; // 10px from right edge, 50px for label
                         const graphOffsetY = startY + i * verticalSpacing + (itemHeight - (8 + graphPadding * 2)) / 2; // Vertically center the graph (graphHeight is 8, padding is 2)
                         return `translate(${graphOffsetX}, ${graphOffsetY})`;
                     })
