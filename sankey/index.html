@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -284,16 +284,13 @@
             spacing: {
                 headerY: 30,
                 itemStartY: 60,
-                biomarkerStartY: 80,
-                itemHeight: 35,
-                biomarkerHeight: 40,
-                itemVerticalSpacing: 45,
-                biomarkerVerticalSpacing: 60
+                itemHeight: 40, // Unified item height
+                itemVerticalSpacing: 45 // Unified vertical spacing
             },
             textOffset: {
-                processX: 15, processY: 22,
+                processX: 15, processY: 25, // Adjusted for unified height
                 biomarkerX: 15, biomarkerY: 25,
-                healthX: 15, healthY: 22
+                healthX: 15, healthY: 25 // Adjusted for unified height
             },
             link: {
                 minStrokeWidth: 2,
@@ -301,7 +298,7 @@
                 controlOffsetMultiplier: 0.5,
                 transitionDuration: 500,
                 dashArray: '10, 5',
-                dashAnimationSpeed: 1000
+                dashAnimationSpeed: 4000 // Slowed down to 25% of original speed (4x duration)
             },
             colors: {
                 processGradientStart: '#3498db', processGradientEnd: '#2980b9',
@@ -355,7 +352,9 @@
 
                     container.selectAll('*').remove(); // Clear existing content
 
-                    const graphWidth = 60;
+                    const graphWidth = 60; // Base width for the bar
+                    const labelWidth = 30; // Estimated width for "100%" label
+                    const totalGraphAreaWidth = graphWidth + 5 + labelWidth; // Bar + spacing + label
                     const graphHeight = 8;
                     const padding = 2;
                     const fillPercentage = value / 100;
@@ -364,7 +363,7 @@
                     container.append('rect')
                         .attr('x', padding)
                         .attr('y', padding)
-                        .attr('width', graphWidth)
+                        .attr('width', graphWidth) // Use base graphWidth for the bar
                         .attr('height', graphHeight)
                         .attr('rx', 2)
                         .attr('ry', 2)
@@ -380,11 +379,11 @@
                         .attr('ry', 2)
                         .attr('fill', 'white');
 
-                    // Optional: Add text label for the value (e.g., "50%")
+                    // Add text label for the value (e.g., "50%")
                     container.append('text')
-                        .attr('x', graphWidth + padding + 5)
+                        .attr('x', graphWidth + padding + 5) // Position next to the bar
                         .attr('y', graphHeight / 2 + padding)
-                        .attr('dy', '0.35em')
+                        .attr('dy', '0.35em') // Center vertically
                         .style('font-size', '9px')
                         .style('fill', 'white')
                         .text(`${value}%`);
@@ -435,16 +434,19 @@
             // Integrate biomarkerMiniGraph if it's a biomarker column
             if (type === 'biomarker') {
                 const graphComponent = biomarkerMiniGraph();
-                const graphWidth = 60;
-                const graphPadding = 2;
+                const graphWidth = 60; // Base width for the bar
+                const labelWidth = 30; // Estimated width for "100%" label
+                const totalGraphAreaWidth = graphWidth + 5 + labelWidth; // Bar + spacing + label
+                const graphPadding = 2; // From biomarkerMiniGraph config
 
-                itemGroups.append('g')
+                itemGroups.append('g') // Append a new group for the graph
                     .attr('transform', (d, i) => {
-                        const graphOffsetX = xPos + width - graphWidth - graphPadding - 30;
-                        const graphOffsetY = startY + i * verticalSpacing + (itemHeight - (8 + graphPadding * 2)) / 2;
+                        // Position the graph to the right of the biomarker box, accounting for its total width
+                        const graphOffsetX = xPos + width - totalGraphAreaWidth - graphPadding - 10;
+                        const graphOffsetY = startY + i * verticalSpacing + (itemHeight - (8 + graphPadding * 2)) / 2; // Vertically center the graph (graphHeight is 8, padding is 2)
                         return `translate(${graphOffsetX}, ${graphOffsetY})`;
                     })
-                    .call(graphComponent);
+                    .call(graphComponent); // Call the component on this new group
             }
 
             // Store yCenter for link drawing
@@ -477,7 +479,7 @@
 
             // Create columns with the new centralized click handler
             createColumn(processGroup, data.processes, 'process', config.column.processX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#processGradient)', config.textOffset.processX, config.textOffset.processY, d => `${d.icon} ${d.name}`, function(event, d) { handleColumnClick(d.id, 'process'); });
-            createColumn(biomarkerGroup, data.biomarkers, 'biomarker', config.column.biomarkerX, config.spacing.biomarkerStartY, config.spacing.biomarkerHeight, config.spacing.biomarkerVerticalSpacing, config.column.width, 'url(#biomarkerGradient)', config.textOffset.biomarkerX, config.textOffset.biomarkerY, d => `${d.name}`, function(event, d) { handleColumnClick(d.id, 'biomarker'); });
+            createColumn(biomarkerGroup, data.biomarkers, 'biomarker', config.column.biomarkerX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#biomarkerGradient)', config.textOffset.biomarkerX, config.textOffset.biomarkerY, d => `${d.name}`, function(event, d) { handleColumnClick(d.id, 'biomarker'); });
             createColumn(healthGroup, data.healthAreas, 'health', config.column.healthX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#healthGradient)', config.textOffset.healthX, config.textOffset.healthY, d => d.name, function(event, d) { handleColumnClick(d.id, 'health'); });
         }
 
@@ -502,7 +504,7 @@
             }
         }
 
-        // Function to handle biomarker selection (existing logic)
+        // Function to handle biomarker selection
         function selectBiomarker(biomarkerId) {
             const selectedBmNode = data.biomarkers.find(b => b.id === biomarkerId);
             if (!selectedBmNode) return;
@@ -510,30 +512,30 @@
             // Highlight selected biomarker
             svg.selectAll('.biomarker-rect').filter(d => d.id === biomarkerId).style('fill', 'url(#selectedGradient)');
 
-            // Draw links to processes (Biomarker -> Process: Right-to-Left)
+            // Draw lines from biomarker to processes (Right-to-Left animation)
             if (relationships[biomarkerId] && relationships[biomarkerId].processes) {
                 relationships[biomarkerId].processes.forEach(proc => {
                     highlightNode('.process-rect', proc.id, true);
                     const processNode = data.processes.find(p => p.id === proc.id);
                     if (processNode) {
-                        drawSigmoidLink(config.column.biomarkerX, selectedBmNode.yCenter, config.column.processX + config.column.width, processNode.yCenter, proc.strength, config.colors.processLink, 'to-process');
+                        drawSigmoidLink(config.column.biomarkerX, selectedBmNode.yCenter, config.column.processX + config.column.width, processNode.yCenter, proc.strength, config.colors.processLink, 'link-bm-to-proc');
                     }
                 });
             }
 
-            // Draw links to health areas (Biomarker -> Health: Left-to-Right)
+            // Draw lines from biomarker to health areas (Right-to-Left animation)
             if (relationships[biomarkerId] && relationships[biomarkerId].healthAreas) {
                 relationships[biomarkerId].healthAreas.forEach(health => {
                     highlightNode('.health-rect', health.id, true);
                     const healthNode = data.healthAreas.find(h => h.id === health.id);
                     if (healthNode) {
-                        drawSigmoidLink(config.column.biomarkerX + config.column.width, selectedBmNode.yCenter, config.column.healthX, healthNode.yCenter, health.strength, config.colors.healthLink, 'to-health');
+                        drawSigmoidLink(config.column.biomarkerX + config.column.width, selectedBmNode.yCenter, config.column.healthX, healthNode.yCenter, health.strength, config.colors.healthLink, 'link-bm-to-ha');
                     }
                 });
             }
         }
 
-        // NEW: Function to handle process selection (Process -> Biomarker: Left-to-Right)
+        // Function to handle process selection (Process -> Biomarker: Left-to-Right animation)
         function selectProcess(processId) {
             const selectedProcessNode = data.processes.find(p => p.id === processId);
             if (!selectedProcessNode) return;
@@ -541,19 +543,19 @@
             // Highlight selected process
             svg.selectAll('.process-rect').filter(d => d.id === processId).style('stroke', config.colors.highlightStroke).style('stroke-width', 3);
 
-            // Draw links from process to biomarkers
+            // Draw lines from process to biomarkers
             if (processToBiomarkers[processId]) {
                 processToBiomarkers[processId].forEach(bm => {
                     highlightNode('.biomarker-rect', bm.id, true);
                     const biomarkerNode = data.biomarkers.find(b => b.id === bm.id);
                     if (biomarkerNode) {
-                        drawSigmoidLink(config.column.processX + config.column.width, selectedProcessNode.yCenter, config.column.biomarkerX, biomarkerNode.yCenter, bm.strength, config.colors.processToBiomarkerLink, 'process-to-biomarker');
+                        drawSigmoidLink(config.column.processX + config.column.width, selectedProcessNode.yCenter, config.column.biomarkerX, biomarkerNode.yCenter, bm.strength, config.colors.processToBiomarkerLink, 'link-proc-to-bm');
                     }
                 });
             }
         }
 
-        // NEW: Function to handle health area selection (Health -> Biomarker: Right-to-Left)
+        // Function to handle health area selection (Health -> Biomarker: Left-to-Right animation)
         function selectHealthArea(healthAreaId) {
             const selectedHealthNode = data.healthAreas.find(h => h.id === healthAreaId);
             if (!selectedHealthNode) return;
@@ -561,13 +563,13 @@
             // Highlight selected health area
             svg.selectAll('.health-rect').filter(d => d.id === healthAreaId).style('stroke', config.colors.highlightStroke).style('stroke-width', 3);
 
-            // Draw links from health area to biomarkers
+            // Draw lines from health area to biomarkers
             if (healthAreaToBiomarkers[healthAreaId]) {
                 healthAreaToBiomarkers[healthAreaId].forEach(bm => {
                     highlightNode('.biomarker-rect', bm.id, true);
                     const biomarkerNode = data.biomarkers.find(b => b.id === bm.id);
                     if (biomarkerNode) {
-                        drawSigmoidLink(config.column.healthX, selectedHealthNode.yCenter, config.column.biomarkerX + config.column.width, biomarkerNode.yCenter, bm.strength, config.colors.healthToBiomarkerLink, 'health-to-biomarker');
+                        drawSigmoidLink(config.column.healthX, selectedHealthNode.yCenter, config.column.biomarkerX + config.column.width, biomarkerNode.yCenter, bm.strength, config.colors.healthToBiomarkerLink, 'link-ha-to-bm');
                     }
                 });
             }
@@ -581,10 +583,10 @@
 
             // Adjust control points based on direction for better curve aesthetics
             let cp1x, cp2x;
-            if (x2 > x1) { // Left to Right flow (e.g., Process to Biomarker, Biomarker to Health)
+            if (x2 > x1) { // Left to Right path direction
                 cp1x = x1 + controlOffset;
                 cp2x = x2 - controlOffset;
-            } else { // Right to Left flow (e.g., Biomarker to Process, Health to Biomarker)
+            } else { // Right to Left path direction
                 cp1x = x1 - controlOffset;
                 cp2x = x2 + controlOffset;
             }
@@ -602,33 +604,33 @@
                 .style('fill', 'none');
 
             // --- Animation Sequence ---
-            const dashPatternLength = config.link.dashArray.split(',').map(s => parseFloat(s.trim())).reduce((a, b) => a + b);
+            const dashPatternLength = path.node().getTotalLength(); // Use actual path length for accurate animation
             let initialOffset, targetOffset;
 
             // Determine animation direction based on class name
-            if (className === 'to-process' || className === 'health-to-biomarker') {
+            if (className === 'link-ha-to-bm' || className === 'link-bm-to-proc') {
                 // Right-to-Left animation (marching ants moving leftward)
-                initialOffset = 0;
-                targetOffset = -dashPatternLength; // Changed to negative for right-to-left visual movement
-            } else {
+                initialOffset = dashPatternLength; // Start with the pattern shifted right
+                targetOffset = 0; // Animate back to 0
+            } else { // This covers 'link-proc-to-bm' and 'link-bm-to-ha'
                 // Left-to-Right animation (marching ants moving rightward)
-                initialOffset = dashPatternLength;
-                targetOffset = 0;
+                initialOffset = 0; // Start at 0
+                targetOffset = -dashPatternLength; // Animate to positive length
             }
 
-            // Set initial dash offset for drawing effect
+            // Set initial dash offset for the first animation cycle
             path.attr('stroke-dashoffset', initialOffset);
 
             // Stable, closure-based recursive animation function for marching ants
             function animateDash() {
                 path.transition()
-                    .duration(config.link.dashAnimationSpeed)
+                    .duration(config.link.dashAnimationSpeed) // This is the speed control
                     .ease(d3.easeLinear)
                     .attr('stroke-dashoffset', targetOffset)
-                    .transition()
-                    .duration(0)
-                    .attr('stroke-dashoffset', initialOffset) // Reset to initial for continuous loop
-                    .on('end', animateDash);
+                    .on('end', () => { // Use a callback to reset and restart
+                        path.attr('stroke-dashoffset', initialOffset); // Reset for next loop
+                        animateDash(); // Restart the animation
+                    });
             }
 
             path.transition()
