@@ -214,23 +214,6 @@
             }
         };
 
-        // New data structure: Pathway to Biomarkers mapping
-        const pathwaysToBiomarkersMap = {
-            'pathway1': [{ id: 'bm1', strength: 7 }, { id: 'bm4', strength: 5 }, { id: 'bm5', strength: 3 }],
-            'pathway2': [{ id: 'bm2', strength: 8 }, { id: 'bm6', strength: 6 }, { id: 'bm3', strength: 4 }],
-            'pathway3': [{ id: 'bm2', strength: 9 }, { id: 'bm5', strength: 7 }, { id: 'bm1', strength: 5 }],
-            'pathway4': [{ id: 'bm1', strength: 4 }, { id: 'bm6', strength: 7 }, { id: 'bm3', strength: 2 }],
-            'pathway5': [{ id: 'bm3', strength: 6 }, { id: 'bm4', strength: 8 }, { id: 'bm2', strength: 4 }],
-            'pathway6': [{ id: 'bm4', strength: 9 }, { id: 'bm1', strength: 6 }, { id: 'bm5', strength: 3 }],
-            'pathway7': [{ id: 'bm1', strength: 8 }, { id: 'bm5', strength: 6 }, { id: 'bm6', strength: 4 }],
-            'pathway8': [{ id: 'bm2', strength: 5 }, { id: 'bm4', strength: 7 }, { id: 'bm3', strength: 9 }],
-            'pathway9': [{ id: 'bm3', strength: 7 }, { id: 'bm6', strength: 9 }, { id: 'bm1', strength: 5 }],
-            'pathway10': [{ id: 'bm5', strength: 8 }, { id: 'bm2', strength: 6 }, { id: 'bm4', strength: 4 }],
-            'pathway11': [{ id: 'bm4', strength: 7 }, { id: 'bm3', strength: 5 }, { id: 'bm6', strength: 8 }],
-            'pathway12': [{ id: 'bm3', strength: 9 }, { id: 'bm1', strength: 7 }, { id: 'bm5', strength: 6 }]
-        };
-
-
         // --- Configuration Object ---
         const config = {
             svg: { width: 1340, height: 600 },
@@ -245,6 +228,8 @@
                 itemStartY: 60,
                 biomarkerStartY: 80,
                 itemHeight: 35,
+                biomarkerHeight: 40,
+                itemVerticalSpacing: 45,
                 biomarkerVerticalSpacing: 60
             },
             // Adjusted text offsets for biomarker to make space for graph
@@ -278,7 +263,6 @@
                       .attr('height', config.svg.height);
 
         let selectedBiomarker = null;
-        let selectedPathway = null;
 
         // Helper to define SVG gradients
         function defineGradients(defs) {
@@ -397,9 +381,8 @@
                 itemGroups.append('g') // Append a new group for the graph
                     .attr('transform', (d, i) => {
                         // Position the graph to the right of the biomarker box
-                        // Deduct graphWidth and padding to align it to the right within the box, plus some extra margin.
-                        const graphOffsetX = xPos + width - graphWidth - (graphPadding * 2) - 5;
-                        const graphOffsetY = startY + i * verticalSpacing + (itemHeight - (graphHeight + graphPadding * 2)) / 2; // Vertically center the graph
+                        const graphOffsetX = xPos + width - graphWidth - graphPadding - 10 - 20; // 10px from right edge, 20px for label
+                        const graphOffsetY = startY + i * verticalSpacing + (itemHeight - (8 + graphPadding * 2)) / 2; // Vertically center the graph (graphHeight is 8, padding is 2)
                         return `translate(${graphOffsetX}, ${graphOffsetY})`;
                     })
                     .call(graphComponent); // Call the component on this new group
@@ -432,20 +415,18 @@
             svg.append('text').attr('x', config.column.biomarkerX + config.column.width / 2).attr('y', config.spacing.headerY).attr('class', 'column-header').style('text-anchor', 'middle').style('font-size', '16px').style('fill', config.colors.headerText).text('Biomarkers');
             svg.append('text').attr('x', config.column.healthX + config.column.width / 2).attr('y', config.spacing.headerY).attr('class', 'column-header').style('text-anchor', 'middle').style('font-size', '16px').style('fill', config.colors.headerText).text('Health Areas');
 
-            createColumn(processGroup, data.processes, 'process', config.column.processX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.biomarkerVerticalSpacing, config.column.width, 'url(#processGradient)', config.textOffset.processX, config.textOffset.processY, d => `${d.icon} ${d.name}`, function(event, d) { selectPathway(d.id); });
+            createColumn(processGroup, data.processes, 'process', config.column.processX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#processGradient)', config.textOffset.processX, config.textOffset.processY, d => `${d.icon} ${d.name}`);
             createColumn(biomarkerGroup, data.biomarkers, 'biomarker', config.column.biomarkerX, config.spacing.biomarkerStartY, config.spacing.biomarkerHeight, config.spacing.biomarkerVerticalSpacing, config.column.width, 'url(#biomarkerGradient)', config.textOffset.biomarkerX, config.textOffset.biomarkerY, d => `${d.name}`, function(event, d) { selectBiomarker(d.id); });
-            createColumn(healthGroup, data.healthAreas, 'health', config.column.healthX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.biomarkerVerticalSpacing, config.column.width, 'url(#healthGradient)', config.textOffset.healthX, config.textOffset.healthY, d => d.name);
+            createColumn(healthGroup, data.healthAreas, 'health', config.column.healthX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#healthGradient)', config.textOffset.healthX, config.textOffset.healthY, d => d.name);
         }
 
         // Function to handle biomarker selection
         function selectBiomarker(biomarkerId) {
             selectedBiomarker = biomarkerId;
-            selectedPathway = null; // Clear pathway selection
-            resetHighlights(); // Reset all highlights
-            svg.selectAll('.biomarker-rect').style('fill', 'url(#biomarkerGradient)'); // Reset biomarker colors
-            svg.selectAll('.biomarker-rect').filter(d => d.id === biomarkerId).style('fill', 'url(#selectedGradient)'); // Highlight selected biomarker
-
-            svg.select('.links').selectAll('.link').interrupt().transition().duration(config.link.transitionDuration / 2).style('stroke-opacity', 0).remove(); // Clear existing links
+            svg.selectAll('.process-rect, .health-rect').style('stroke', 'none').style('stroke-width', 0);
+            svg.selectAll('.biomarker-rect').style('fill', 'url(#biomarkerGradient)');
+            svg.selectAll('.biomarker-rect').filter(d => d.id === biomarkerId).style('fill', 'url(#selectedGradient)');
+            svg.select('.links').selectAll('.link').interrupt().transition().duration(config.link.transitionDuration / 2).style('stroke-opacity', 0).remove();
 
             if (relationships[biomarkerId]) {
                 const rel = relationships[biomarkerId];
@@ -470,32 +451,6 @@
             }
         }
         
-        // New function to handle pathway selection
-        function selectPathway(pathwayId) {
-            selectedPathway = pathwayId;
-            selectedBiomarker = null; // Clear biomarker selection
-            resetHighlights(); // Reset all highlights
-            svg.selectAll('.process-rect').style('fill', 'url(#processGradient)'); // Reset pathway colors
-            svg.selectAll('.process-rect').filter(d => d.id === pathwayId).style('fill', 'url(#selectedGradient)'); // Highlight selected pathway
-
-            svg.select('.links').selectAll('.link').interrupt().transition().duration(config.link.transitionDuration / 2).style('stroke-opacity', 0).remove(); // Clear existing links
-
-            if (pathwaysToBiomarkersMap[pathwayId]) {
-                const pathwayRel = pathwaysToBiomarkersMap[pathwayId];
-                const selectedPathwayNode = data.processes.find(p => p.id === pathwayId);
-                if (!selectedPathwayNode) return;
-
-                pathwayRel.forEach(bm => {
-                    highlightNode('.biomarker-rect', bm.id, true);
-                    const biomarkerNode = data.biomarkers.find(b => b.id === bm.id);
-                    if (biomarkerNode) {
-                        // Lines from pathway (left) to biomarker (middle)
-                        drawSigmoidLink(config.column.processX + config.column.width, selectedPathwayNode.yCenter, config.column.biomarkerX, biomarkerNode.yCenter, bm.strength, config.colors.processLink, 'to-biomarker');
-                    }
-                });
-            }
-        }
-
         // The updated drawSigmoidLink function with corrected animations
         function drawSigmoidLink(x1, y1, x2, y2, strength, color, className) {
             const strokeWidth = Math.max(config.link.minStrokeWidth, strength * config.link.strengthMultiplier);
@@ -519,7 +474,7 @@
 
             // --- Animation Sequence ---
             const dashPatternLength = config.link.dashArray.split(',').map(s => parseFloat(s.trim())).reduce((a, b) => a + b);
-            const targetOffset = className === 'to-process' ? dashPatternLength : -dashPatternLength; // Changed for consistency
+            const targetOffset = className === 'to-process' ? dashPatternLength : -dashPatternLength;
 
             // Stable, closure-based recursive animation function
             function animateDash() {
@@ -542,15 +497,9 @@
         // Reset function
         function resetSelection() {
             selectedBiomarker = null;
-            selectedPathway = null;
-            resetHighlights();
+            svg.selectAll('.process-rect, .health-rect').style('stroke', 'none').style('stroke-width', 0);
+            svg.selectAll('.biomarker-rect').style('fill', 'url(#biomarkerGradient)');
             svg.select('.links').selectAll('.link').interrupt().transition().duration(config.link.transitionDuration / 2).style('stroke-opacity', 0).remove();
-        }
-
-        function resetHighlights() {
-            svg.selectAll('.process-rect').style('stroke', 'none').style('stroke-width', 0).style('fill', 'url(#processGradient)');
-            svg.selectAll('.biomarker-rect').style('stroke', 'none').style('stroke-width', 0).style('fill', 'url(#biomarkerGradient)');
-            svg.selectAll('.health-rect').style('stroke', 'none').style('stroke-width', 0).style('fill', 'url(#healthGradient)');
         }
 
         // Initialize the visualization on page load
