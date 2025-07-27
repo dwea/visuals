@@ -135,21 +135,27 @@
     </div>
 
     <script>
+        // Helper function to generate random percentages for the bars
+        function getRandomPercentage(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
         // Data structure
         const data = {
+            // Added random red_value and yellow_value for processes (0-25%)
             processes: [
-                { id: 'pathway1', name: 'Beta oxidation of fatty acids', icon: '🔄' },
-                { id: 'pathway2', name: 'Amino acid metabolism', icon: '🔄' },
-                { id: 'pathway3', name: 'Coagulation pathway', icon: '🔄' },
-                { id: 'pathway4', name: 'Urea cycle', icon: '🛤️' },
-                { id: 'pathway5', name: 'Glycolysis', icon: '🛤️' },
-                { id: 'pathway6', name: 'Lipid metabolism', icon: '🛤️' },
-                { id: 'pathway7', name: 'Complement cascade', icon: '⚡' },
-                { id: 'pathway8', name: 'Cascade 2', icon: '⚡' },
-                { id: 'pathway9', name: 'Cascade 3', icon: '⚡' },
-                { id: 'pathway10', name: 'Health Area 1', icon: '🏥' },
-                { id: 'pathway11', name: 'Ad Hoc Collection', icon: '📊' },
-                { id: 'pathway12', name: 'Pathway Factors', icon: '🩺' }
+                { id: 'pathway1', name: 'Beta oxidation of fatty acids', icon: '🔄', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway2', name: 'Amino acid metabolism', icon: '🔄', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway3', name: 'Coagulation pathway', icon: '🔄', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway4', name: 'Urea cycle', icon: '🛤️', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway5', name: 'Glycolysis', icon: '🛤️', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway6', name: 'Lipid metabolism', icon: '🛤️', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway7', name: 'Complement cascade', icon: '⚡', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway8', name: 'Cascade 2', icon: '⚡', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway9', name: 'Cascade 3', icon: '⚡', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway10', name: 'Health Area 1', icon: '🏥', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway11', name: 'Ad Hoc Collection', icon: '📊', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) },
+                { id: 'pathway12', name: 'Pathway Factors', icon: '🩺', red_value: getRandomPercentage(0, 25), yellow_value: getRandomPercentage(0, 25) }
             ],
             biomarkers: [
                 { id: 'bm1', name: 'Tyrosine', value: 75 },
@@ -159,15 +165,16 @@
                 { id: 'bm5', name: 'Threonine', value: 65 },
                 { id: 'bm6', name: 'Serine', value: 20 }
             ],
+            // Added random values for health areas (between 55 and 100)
             healthAreas: [
-                { id: 'ha1', name: 'Alzheimer’s Disease' },
-                { id: 'ha2', name: 'Cognitive Health' },
-                { id: 'ha3', name: 'Inflammation' },
-                { id: 'ha4', name: 'Dietary Health' },
-                { id: 'ha5', name: 'Diabetes' },
-                { id: 'ha6', name: 'Cardiovascular Disease' },
-                { id: 'ha7', name: 'Inflammatory Bowel Disease' },
-                { id: 'ha8', name: 'Liver Disease' }
+                { id: 'ha1', name: 'Alzheimer’s Disease', value: getRandomPercentage(55, 100) },
+                { id: 'ha2', name: 'Cognitive Health', value: getRandomPercentage(55, 100) },
+                { id: 'ha3', name: 'Inflammation', value: getRandomPercentage(55, 100) },
+                { id: 'ha4', name: 'Dietary Health', value: getRandomPercentage(55, 100) },
+                { id: 'ha5', name: 'Diabetes', value: getRandomPercentage(55, 100) },
+                { id: 'ha6', name: 'Cardiovascular Disease', value: getRandomPercentage(55, 100) },
+                { id: 'ha7', name: 'Inflammatory Bowel Disease', value: getRandomPercentage(55, 100) },
+                { id: 'ha8', name: 'Liver Disease', value: getRandomPercentage(55, 100) }
             ]
         };
 
@@ -311,7 +318,10 @@
                 processToBiomarkerLink: '#3498db', // Process to Biomarker (Left-to-Right)
                 healthToBiomarkerLink: '#27ae60',  // Health to Biomarker (Right-to-Left)
                 headerText: '#2c3e50',
-                defaultRectFill: 'url(#biomarkerGradient)' // Default for biomarker rects
+                defaultRectFill: 'url(#biomarkerGradient)', // Default for biomarker rects
+                healthCircleFill: '#2ecc71', // Green for health circles
+                processBarRed: '#e74c3c', // Specific red for process bar
+                processBarYellow: '#f1c40f' // Specific yellow for process bar
             }
         };
 
@@ -399,6 +409,117 @@
             return chart;
         }
 
+        // Reusable Health Area Circle Graph Component
+        function healthAreaCircleGraph() {
+            let valueAccessor = d => d.value;
+
+            function chart(selection) {
+                selection.each(function(d) {
+                    const container = d3.select(this);
+                    const value = valueAccessor(d);
+
+                    container.selectAll('*').remove(); // Clear existing content
+
+                    const circleRadius = 15; // Increased radius to fit text well
+                    const circleDiameter = circleRadius * 2;
+                    const padding = 2; // Padding within the overall container for the circle
+
+                    container.append('circle')
+                        .attr('cx', circleRadius + padding) // Center of the circle
+                        .attr('cy', circleRadius + padding) // Center of the circle
+                        .attr('r', circleRadius)
+                        .attr('fill', config.colors.healthCircleFill)
+                        .style('stroke', 'white')
+                        .style('stroke-width', 1.5);
+
+                    container.append('text')
+                        .attr('x', circleRadius + padding) // Center of the circle
+                        .attr('y', circleRadius + padding) // Center of the circle
+                        .attr('dy', '0.35em') // Vertical alignment for text
+                        .style('text-anchor', 'middle') // Horizontal alignment for text
+                        .style('fill', 'white')
+                        .style('font-size', '12px') // Adjust font size as needed
+                        .style('font-weight', 'bold')
+                        .text(value); // Display the number
+                });
+            }
+
+            chart.value = function(accessor) {
+                if (!arguments.length) return valueAccessor;
+                valueAccessor = accessor;
+                return chart;
+            };
+
+            return chart;
+        }
+
+        // Reusable Process Multi-Color Bar Graph Component
+        function processMultiBarGraph() {
+            let redValueAccessor = d => d.red_value;
+            let yellowValueAccessor = d => d.yellow_value;
+
+            function chart(selection) {
+                selection.each(function(d) {
+                    const container = d3.select(this);
+                    const redValue = redValueAccessor(d);
+                    const yellowValue = yellowValueAccessor(d);
+
+                    container.selectAll('*').remove(); // Clear existing content
+
+                    const graphWidth = 60; // Consistent width for the bar
+                    const graphHeight = 8;
+                    const padding = 2; // Padding within the overall container
+
+                    // Background bar (representing 100% or the 'empty' part visually)
+                    container.append('rect')
+                        .attr('x', padding)
+                        .attr('y', padding)
+                        .attr('width', graphWidth)
+                        .attr('height', graphHeight)
+                        .attr('rx', 2)
+                        .attr('ry', 2)
+                        .attr('fill', 'rgba(255,255,255,0.3)'); // A light fill for the "empty" part
+
+                    // Red bar segment
+                    const redBarWidth = (redValue / 100) * graphWidth;
+                    container.append('rect')
+                        .attr('x', padding)
+                        .attr('y', padding)
+                        .attr('width', redBarWidth)
+                        .attr('height', graphHeight)
+                        .attr('rx', 2)
+                        .attr('ry', 2)
+                        .attr('fill', config.colors.processBarRed);
+
+                    // Yellow bar segment (stacked after red)
+                    const yellowBarWidth = (yellowValue / 100) * graphWidth;
+                    container.append('rect')
+                        .attr('x', padding + redBarWidth) // Start after the red bar
+                        .attr('y', padding)
+                        .attr('width', yellowBarWidth)
+                        .attr('height', graphHeight)
+                        .attr('rx', 2)
+                        .attr('ry', 2)
+                        .attr('fill', config.colors.processBarYellow);
+                });
+            }
+
+            chart.redValue = function(accessor) {
+                if (!arguments.length) return redValueAccessor;
+                redValueAccessor = accessor;
+                return chart;
+            };
+
+            chart.yellowValue = function(accessor) {
+                if (!arguments.length) return yellowValueAccessor;
+                yellowValueAccessor = accessor;
+                return chart;
+            };
+
+            return chart;
+        }
+
+
         // Helper to create a column of items
         function createColumn(group, itemsData, type, xPos, startY, itemHeight, verticalSpacing, width, rectFill, textOffsetX, textOffsetY, textFormatter, clickHandler = null) {
             const itemGroups = group.selectAll(`.${type}-item-group`)
@@ -431,7 +552,7 @@
                 .style('font-weight', '500')
                 .text(textFormatter);
 
-            // Integrate biomarkerMiniGraph if it's a biomarker column
+            // Integrate mini-graph based on column type
             if (type === 'biomarker') {
                 const graphComponent = biomarkerMiniGraph();
                 const graphWidth = 60; // Base width for the bar
@@ -447,7 +568,38 @@
                         return `translate(${graphOffsetX}, ${graphOffsetY})`;
                     })
                     .call(graphComponent); // Call the component on this new group
+            } else if (type === 'health') {
+                const graphComponent = healthAreaCircleGraph();
+                const circleRadius = 15; // From healthAreaCircleGraph config
+                const graphPadding = 2; // From healthAreaCircleGraph config
+                const totalCircleAreaWidth = (circleRadius * 2) + (graphPadding * 2);
+
+                itemGroups.append('g') // Append a new group for the circle graph
+                    .attr('transform', (d, i) => {
+                        // Position the graph to the right of the health box, accounting for its total width
+                        const graphOffsetX = xPos + width - totalCircleAreaWidth - 10; // 10px from right edge
+                        const graphOffsetY = startY + i * verticalSpacing + (itemHeight - totalCircleAreaWidth) / 2; // Vertically center the circle
+
+                        return `translate(${graphOffsetX}, ${graphOffsetY})`;
+                    })
+                    .call(graphComponent); // Call the component on this new group
+            } else if (type === 'process') { // Process multi-bar graph
+                const graphComponent = processMultiBarGraph();
+                const graphWidth = 60; // Consistent width for the bar
+                const graphHeight = 8;
+                const graphPadding = 2;
+
+                itemGroups.append('g') // Append a new group for the process graph
+                    .attr('transform', (d, i) => {
+                        // Position the graph to the right of the process box
+                        const graphOffsetX = xPos + width - graphWidth - (2 * graphPadding) - 10; // 10px from right edge
+                        const graphOffsetY = startY + i * verticalSpacing + (itemHeight - (graphHeight + (2 * graphPadding))) / 2; // Vertically center
+
+                        return `translate(${graphOffsetX}, ${graphOffsetY})`;
+                    })
+                    .call(graphComponent);
             }
+
 
             // Store yCenter for link drawing
             itemsData.forEach((d, i) => d.yCenter = startY + i * verticalSpacing + itemHeight / 2);
@@ -478,7 +630,8 @@
             svg.append('text').attr('x', config.column.healthX + config.column.width / 2).attr('y', config.spacing.headerY).attr('class', 'column-header').style('text-anchor', 'middle').style('font-size', '16px').style('fill', config.colors.headerText).text('Health Areas');
 
             // Create columns with the new centralized click handler
-            createColumn(processGroup, data.processes, 'process', config.column.processX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#processGradient)', config.textOffset.processX, config.textOffset.processY, d => `${d.icon} ${d.name}`, function(event, d) { handleColumnClick(d.id, 'process'); });
+            // Removed d.icon from the process text formatter
+            createColumn(processGroup, data.processes, 'process', config.column.processX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#processGradient)', config.textOffset.processX, config.textOffset.processY, d => `${d.name}`, function(event, d) { handleColumnClick(d.id, 'process'); });
             createColumn(biomarkerGroup, data.biomarkers, 'biomarker', config.column.biomarkerX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#biomarkerGradient)', config.textOffset.biomarkerX, config.textOffset.biomarkerY, d => `${d.name}`, function(event, d) { handleColumnClick(d.id, 'biomarker'); });
             createColumn(healthGroup, data.healthAreas, 'health', config.column.healthX, config.spacing.itemStartY, config.spacing.itemHeight, config.spacing.itemVerticalSpacing, config.column.width, 'url(#healthGradient)', config.textOffset.healthX, config.textOffset.healthY, d => d.name, function(event, d) { handleColumnClick(d.id, 'health'); });
         }
@@ -496,9 +649,11 @@
 
                 if (type === 'biomarker') {
                     selectBiomarker(id);
-                } else if (type === 'process') {
+                }
+                else if (type === 'process') {
                     selectProcess(id);
-                } else if (type === 'health') {
+                }
+                else if (type === 'health') {
                     selectHealthArea(id);
                 }
             }
