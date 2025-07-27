@@ -119,12 +119,12 @@
                 { id: 'pathway12', name: 'Pathway Factors', icon: '🩺' }
             ],
             biomarkers: [
-                { id: 'bm1', name: 'Tyrosine' },
-                { id: 'bm2', name: 'Histadine' },
-                { id: 'bm3', name: 'Asparagine' },
-                { id: 'bm4', name: 'Pyruvic acid' },
-                { id: 'bm5', name: 'Threonine' },
-                { id: 'bm6', name: 'Serine' }
+                { id: 'bm1', name: 'Tyrosine', value: 75 }, // Added value
+                { id: 'bm2', name: 'Histadine', value: 30 }, // Added value
+                { id: 'bm3', name: 'Asparagine', value: 90 }, // Added value
+                { id: 'bm4', name: 'Pyruvic acid', value: 50 }, // Added value
+                { id: 'bm5', name: 'Threonine', value: 65 }, // Added value
+                { id: 'bm6', name: 'Serine', value: 20 }  // Added value
             ],
             healthAreas: [
                 { id: 'ha1', name: 'Alzheimer’s Disease' },
@@ -232,9 +232,10 @@
                 itemVerticalSpacing: 45,
                 biomarkerVerticalSpacing: 60
             },
+            // Adjusted text offsets for biomarker to make space for graph
             textOffset: {
                 processX: 15, processY: 22,
-                biomarkerX: 20, biomarkerY: 25,
+                biomarkerX: 15, biomarkerY: 25, // Adjusted for graph
                 healthX: 15, healthY: 22
             },
             link: {
@@ -279,6 +280,66 @@
             });
         }
 
+        // START: Reusable Biomarker Graph Component
+        function biomarkerMiniGraph() {
+            let valueAccessor = d => d.value; // Default accessor for the 'value' property
+
+            function chart(selection) {
+                selection.each(function(d) {
+                    const container = d3.select(this);
+                    const value = valueAccessor(d); // Get the data value (e.g., 50)
+
+                    // Clear existing content to allow for updates
+                    container.selectAll('*').remove();
+
+                    // Configuration for the mini graph
+                    const graphWidth = 60; // Max width of the graph area
+                    const graphHeight = 8;
+                    const padding = 2; // Padding around the graph within its container
+                    const fillPercentage = value / 100; // Assuming value is 0-100
+
+                    // Background bar
+                    container.append('rect')
+                        .attr('x', padding)
+                        .attr('y', padding)
+                        .attr('width', graphWidth)
+                        .attr('height', graphHeight)
+                        .attr('rx', 2)
+                        .attr('ry', 2)
+                        .attr('fill', 'rgba(255,255,255,0.3)');
+
+                    // Filled bar
+                    container.append('rect')
+                        .attr('x', padding)
+                        .attr('y', padding)
+                        .attr('width', graphWidth * fillPercentage)
+                        .attr('height', graphHeight)
+                        .attr('rx', 2)
+                        .attr('ry', 2)
+                        .attr('fill', 'white');
+
+                    // Optional: Add text label for the value (e.g., "50%")
+                    container.append('text')
+                        .attr('x', graphWidth + padding + 5) // Position next to the bar
+                        .attr('y', graphHeight / 2 + padding)
+                        .attr('dy', '0.35em') // Center vertically
+                        .style('font-size', '9px')
+                        .style('fill', 'white')
+                        .text(`${value}%`);
+                });
+            }
+
+            // Public method to set the value accessor if needed
+            chart.value = function(accessor) {
+                if (!arguments.length) return valueAccessor;
+                valueAccessor = accessor;
+                return chart;
+            };
+
+            return chart;
+        }
+        // END: Reusable Biomarker Graph Component
+
         // Helper to create a column of items
         function createColumn(group, itemsData, type, xPos, startY, itemHeight, verticalSpacing, width, rectFill, textOffsetX, textOffsetY, textFormatter, clickHandler = null) {
             const itemGroups = group.selectAll(`.${type}-item-group`)
@@ -310,6 +371,21 @@
                 .style('font-size', '13px')
                 .style('font-weight', '500')
                 .text(textFormatter);
+
+            // Integrate biomarkerMiniGraph if it's a biomarker column
+            if (type === 'biomarker') {
+                const graphComponent = biomarkerMiniGraph(); // Create an instance of the component
+
+                itemGroups.append('g') // Append a new group for the graph
+                    .attr('transform', (d, i) => {
+                        // Position the graph to the right of the biomarker name
+                        const textLength = d.name.length * 8; // Estimate text width (adjust as needed)
+                        const graphOffsetX = xPos + textOffsetX + textLength + 10; // 10px spacing
+                        const graphOffsetY = startY + i * verticalSpacing + 8; // Vertically center within the biomarker rect
+                        return `translate(${graphOffsetX}, ${graphOffsetY})`;
+                    })
+                    .call(graphComponent); // Call the component on this new group
+            }
 
             itemsData.forEach((d, i) => d.yCenter = startY + i * verticalSpacing + itemHeight / 2);
         }
