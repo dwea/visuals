@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Biomarker Sankey</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="biomarkerGraph.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif; /* Changed to Inter */
@@ -121,7 +122,6 @@
             }
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -312,9 +312,9 @@
             },
             colors: {
                 // 10% Tint (Default State)
-                processGradient_DEFAULT_Start: '#e0f2f7', processGradient_DEFAULT_End: '#d4edf4',
-                biomarkerGradient_DEFAULT_Start: '#f9e0e0', biomarkerGradient_DEFAULT_End: '#f6d4d4',
-                healthGradient_DEFAULT_Start: '#dff7e8', healthGradient_DEFAULT_End: '#d0efdd',
+                processGradient_DEFAULT_Start: '#DDE7EB', processGradient_DEFAULT_End: '#EEF8FD',
+                biomarkerGradient_DEFAULT_Start: '#e0e0e0', biomarkerGradient_DEFAULT_End: '#f6f6f6',
+                healthGradient_DEFAULT_Start: '#E1ECDD', healthGradient_DEFAULT_End: '#F2FDEE',
 
                 // 20% Tint (Hover State)
                 processGradient_HOVER_Start: '#c0e6f2', processGradient_HOVER_End: '#b0dae7',
@@ -373,61 +373,6 @@
                 gradient.append('stop').attr('offset', '0%').attr('stop-color', g.start);
                 gradient.append('stop').attr('offset', '100%').attr('stop-color', g.end);
             });
-        }
-
-        // Reusable Biomarker Graph Component
-        function biomarkerMiniGraph() {
-            let valueAccessor = d => d.value;
-
-            function chart(selection) {
-                selection.each(function(d) {
-                    const container = d3.select(this);
-                    const value = valueAccessor(d);
-
-                    container.selectAll('*').remove();
-
-                    const graphWidth = 60;
-                    const labelWidth = 30;
-                    const totalGraphAreaWidth = graphWidth + 5 + labelWidth;
-                    const graphHeight = 8;
-                    const padding = 2;
-                    const fillPercentage = value / 100;
-
-                    container.append('rect')
-                        .attr('x', padding)
-                        .attr('y', padding)
-                        .attr('width', graphWidth)
-                        .attr('height', graphHeight)
-                        .attr('rx', 2)
-                        .attr('ry', 2)
-                        .attr('fill', 'rgba(0,0,0,0.1)');
-
-                    container.append('rect')
-                        .attr('x', padding)
-                        .attr('y', padding)
-                        .attr('width', graphWidth * fillPercentage)
-                        .attr('height', graphHeight)
-                        .attr('rx', 2)
-                        .attr('ry', 2)
-                        .attr('fill', config.colors.itemText);
-
-                    container.append('text')
-                        .attr('x', graphWidth + padding + 5)
-                        .attr('y', graphHeight / 2 + padding)
-                        .attr('dy', '0.35em')
-                        .style('font-size', '9px')
-                        .style('fill', config.colors.itemText)
-                        .text(`${value}%`);
-                });
-            }
-
-            chart.value = function(accessor) {
-                if (!arguments.length) return valueAccessor;
-                valueAccessor = accessor;
-                return chart;
-            };
-
-            return chart;
         }
 
         // Reusable Health Area Circle Graph Component
@@ -597,8 +542,9 @@
                 .text(textFormatter);
 
             // Integrate mini-graph based on column type
+            // there are multiple graph types: 'basic', 'pill'
             if (type === 'biomarker') {
-                const graphComponent = biomarkerMiniGraph();
+                const graphComponent = biomarkerMiniGraph('gauge');
                 const graphWidth = 60;
                 const labelWidth = 30;
                 const totalGraphAreaWidth = graphWidth + 5 + labelWidth;
